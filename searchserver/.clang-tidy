@@ -1,0 +1,74 @@
+---
+Checks: "bugprone-*,
+        cert-*,
+        clang-analyzer-*,
+        clang-diagnostic-*,
+        hicpp-*,
+        misc-*,
+        modernize-*,
+        performance-*,
+        portability-*,
+        readability-*,
+        -cppcoreguidelines-non-private-member-variables-in-classes,
+        -cppcoreguidelines-owning-memory,
+        -hicpp-braces-around-statements,          # ideally would check, sometimes causes clang-tidy to crash tho
+        -hicpp-use-auto,
+        -hicpp-explicit-conversions, # disabled for this homework because of the json object
+        -misc-non-private-member-variables-in-classes,
+        -modernize-use-auto,
+        -misc-no-recursion,
+        -bugprone-easily-swappable-parameters,
+        -bugprone-suspicious-include, # expected that some will do template #include
+        -modernize-use-trailing-return-type,
+        -modernize-use-default-member-init,
+        -performance-no-int-to-ptr,
+        -portability-restrict-system-includes,
+        -readability-braces-around-statements,    # ideally would check, sometimes causes clang-tidy to crash tho
+        -readability-simplify-boolean-expr,       # ideally would check, sometimes causes clang-tidy to crash tho
+        -readability-else-after-return,
+        -readability-static-accessed-through-instance,
+        -readability-identifier-length,
+        -readability-redundant-string-init,
+        -readability-use-anyofallof,
+        -hicpp-vararg,
+"
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+FormatStyle:     Chromium
+CheckOptions:
+  readability-function-cognitive-complexity.DescribeBasicIncrements: 'true'
+  readability-function-cognitive-complexity.IgnoreMacros: 'true'
+  readability-function-cognitive-complexity.Threshold: '25'
+  readability-identifier-naming.AbstractClassCase: 'CamelCase'
+  readability-identifier-naming.ClassCase: 'CamelCase'
+  readability-identifier-naming.ClassConstantCase: 'lower_case'
+  readability-identifier-naming.ClassMemberCase: 'lower_case'
+  readability-identifier-naming.ClassMemberPrefix: 'm_'
+  readability-identifier-naming.ClassMethodCase: 'CamelCase'
+  readability-identifier-naming.ConstantCase: 'lower_case'
+  readability-identifier-naming.GlobalConstantPrefix: 'k_'
+  readability-identifier-naming.ClassConstantPrefix: 'k_'
+  readability-identifier-naming.ConstantMemberCase: 'lower_case'
+  readability-identifier-naming.EnumCase: 'CamelCase'
+  readability-identifier-naming.FunctionCase: 'CamelCase'
+  readability-identifier-naming.GlobalConstantCase: 'lower_case'
+  readability-identifier-naming.GlobalConstantPrefix: 'k_'
+  readability-identifier-naming.GlobalVariableCase: 'lower_case'
+  readability-identifier-naming.GlobalVariablePrefix: 'g_'
+  readability-identifier-naming.IgnoreMainLikeFunctions: 'true'
+  readability-identifier-naming.MemberCase: 'lower_case'
+  readability-identifier-naming.MethodCase: 'CamelCase'
+  readability-identifier-naming.NamespaceCase: 'lower_case'
+  readability-identifier-naming.ParameterCase: 'lower_case'
+  readability-identifier-naming.PrivateMemberPrefix: 'm_'
+  readability-identifier-naming.ProtectedMemberPrefix: 'm_'
+  readability-identifier-naming.StaticConstantPrefix: 'k_'
+  readability-identifier-naming.StaticVariablePrefix: 'g_'
+  readability-identifier-naming.StructCase: 'CamelCase'
+  readability-identifier-naming.TemplateParmaterCase: 'UPPER_CASE'
+  readability-identifier-naming.VariableCase: 'lower_case'
+  readability-magic-numbers.IgnoredIntegerValues: '1;2;3;4;10;48'
+  readability-magic-numbers.IgnorePowersOf2IntegerValues: 'true'
+  readability-magic-numbers.IgnoreBitFieldsWidths: 'true'
+  readability-magic-numbers.IgnoredFloatingPointValues: '1.0;100.0;'
+...
