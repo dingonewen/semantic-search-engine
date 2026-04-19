@@ -1,12 +1,10 @@
 # Work split and file ownership
 
-Replace PartnerA and PartnerB with your GitHub usernames or real names.
-
 Overview
 --------
 This file maps each header/source to a partner to avoid merge conflicts. Each partner should work in their assigned files and avoid editing the other partner's files unless coordinating.
 
-PartnerA (Person 1)
+Yiwen
 - Ownership: network, connection handling, HTTP serialization
 - Files to implement (headers created):
   - `SocketWrapper.hpp` / SocketWrapper.cpp
@@ -14,6 +12,7 @@ PartnerA (Person 1)
   - `HttpRequest.hpp` / HttpRequest.cpp (parsing helpers)
   - `HttpResponse.hpp` / HttpResponse.cpp (to_string serialization)
   - `Server.hpp` / Server.cpp (accept loop, connection logging)
+  - ENSURE there is at least one test for every function
 
 Responsibilities:
 - Implement safe socket RAII and wrapper helpers.
@@ -21,7 +20,7 @@ Responsibilities:
 - Parse raw bytes into `HttpRequest` and serialize `HttpResponse`.
 - Handle Connection: close header, and graceful shutdown signaling.
 
-PartnerB (Person 2)
+JC
 - Ownership: indexing, crawling, search logic, client shell
 - Files to implement (headers created):
   - `FileCrawler.hpp` / FileCrawler.cpp
@@ -29,6 +28,7 @@ PartnerB (Person 2)
   - `SearchEngine.hpp` / SearchEngine.cpp
   - `ClientShell.hpp` / ClientShell.cpp
   - `Utils.hpp` / Utils.cpp (tokenization, lowercase)
+  - ENSURE there is at least one test for every function
 
 Responsibilities:
 - Crawl `test_tree` and other directories to collect file contents.
@@ -45,6 +45,3 @@ Notes
 - Keep changes small and frequent; create feature branches and open PRs rather than pushing directly to `main`.
 - When adding .cpp files, add them to the `Makefile` and notify partner to avoid Makefile edit conflicts (one person should own the Makefile edits — agree who).
 
-Example ownership summary (replace names):
-- PartnerA: alice123
-- PartnerB: bob456
