@@ -1,0 +1,33 @@
+#pragma once
+#include <string>
+#include "InvertedIndex.hpp"
+#include "ThreadPool.hpp"
+
+namespace searchserver {
+
+// Manages the lifecycle of the HTTP server: binds a TCP socket, accepts
+// incoming connections, and dispatches each connection to a ThreadPool worker.
+// Owns an InvertedIndex built from files_root at startup.
+class HttpServer {
+ public:
+  // Constructs the server.
+  //   port        -- TCP port to listen on
+  //   files_root  -- root directory to serve static files from and index
+  //   num_threads -- number of worker threads in the ThreadPool (default 8)
+  HttpServer(int port, const std::string& files_root, size_t num_threads = 8);
+
+  ~HttpServer();
+
+  // Starts the server accept loop (blocking — does not return until the process
+  // is killed). Loads the initial HTML response from initial_response_path and
+  // serves it at "/". Returns a non-zero exit code on fatal error.
+  int run(const std::string& initial_response_path);
+
+ private:
+  int m_port;
+  std::string m_files_root;
+  ThreadPool m_pool;      // Pool of worker threads handling connections
+  InvertedIndex m_index;  // Full-text index built from m_files_root
+};
+
+}  // namespace searchserver

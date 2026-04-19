@@ -1,16 +1,16 @@
-// HttpResponse.hpp
-// Minimal representation of an HTTP response (status, headers, body).
-
 #pragma once
-
 #include <string>
-#include <unordered_map>
 
-struct HttpResponse {
-  int status_code = 200;
-  std::string reason = "OK";
-  std::unordered_map<std::string, std::string> headers;
-  std::string body;
-
-  std::string to_string() const;  // helper to serialize response
-};
+// Builds a complete HTTP/1.1 response string ready to send over a socket.
+//
+// Parameters:
+//   status       -- HTTP status code, e.g. 200, 404, 409
+//   body         -- Response body content (HTML, plain text, binary, etc.)
+//   content_type -- MIME type for the Content-Type header (default "text/plain")
+//   status_text  -- Reason phrase, e.g. "Not Found". Inferred from status if empty.
+//
+// Returns the full response as a string including headers and body.
+std::string make_response(int status,
+                          const std::string& body,
+                          const std::string& content_type = "text/plain",
+                          const std::string& status_text = "");
