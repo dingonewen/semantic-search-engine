@@ -10,7 +10,48 @@ TESTOBJS = test_threadpool.o test_suite.o catch.o
 CPP_SOURCE_FILES = ThreadPool.cpp
 HPP_SOURCE_FILES = ThreadPool.hpp
 
-all: test_suite
+
+all: test_suite searchserver searchclient
+
+# build a minimal searchserver binary for the assignment demo
+SRV_OBJS = searchserver.o HttpServer.o Request.o Response.o StaticFile.o InvertedIndex.o ThreadPool.o
+
+searchserver: $(SRV_OBJS)
+	$(CXX) $(CXXFLAGS) -o searchserver $(SRV_OBJS)
+
+searchserver.o: searchserver.cpp HttpServer.hpp
+	$(CXX) $(CXXFLAGS) -c searchserver.cpp
+
+HttpServer.o: HttpServer.cpp HttpServer.hpp Request.hpp Response.hpp StaticFile.hpp InvertedIndex.hpp ThreadPool.hpp
+	$(CXX) $(CXXFLAGS) -c HttpServer.cpp
+
+Request.o: Request.cpp Request.hpp
+	$(CXX) $(CXXFLAGS) -c Request.cpp
+
+Response.o: Response.cpp Response.hpp
+	$(CXX) $(CXXFLAGS) -c Response.cpp
+
+StaticFile.o: StaticFile.cpp StaticFile.hpp Response.hpp
+	$(CXX) $(CXXFLAGS) -c StaticFile.cpp
+
+InvertedIndex.o: InvertedIndex.cpp InvertedIndex.hpp
+	$(CXX) $(CXXFLAGS) -c InvertedIndex.cpp
+
+# client shell
+client_shell: client_shell.o
+	$(CXX) $(CXXFLAGS) -o client_shell client_shell.o
+
+client_shell.o: client_shell.cpp client_shell.hpp
+	$(CXX) $(CXXFLAGS) -c client_shell.cpp
+
+# searchclient
+searchclient: searchclient.o
+	$(CXX) $(CXXFLAGS) -o searchclient searchclient.o
+
+searchclient.o: searchclient.cpp
+	$(CXX) $(CXXFLAGS) -c searchclient.cpp
+
+# crawl_demo removed (legacy demo); source retained as placeholder if needed
 
 test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o
 	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o

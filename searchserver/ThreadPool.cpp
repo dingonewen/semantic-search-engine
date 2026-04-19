@@ -1,7 +1,7 @@
-#include <unistd.h>
-#include <iostream>
+#include "ThreadPool.hpp"
 
-#include "./ThreadPool.hpp"
+#include <iostream>
+#include <thread>
 
 namespace searchserver {
 
@@ -9,52 +9,56 @@ namespace searchserver {
 // wait for a signal on the work queue condition variable, then they
 // grab work off the queue.  Threads return when they notice that
 // m_killthreads is true.
-// Every worker thread runs forever until being killed
 void ThreadPool::thread_loop() {
-  while (true) {
-    Task t;
+  for (;;) {
+    Task task;
     {
-      std::unique_lock<std::mutex> lock(m_mtx);
-      m_cond.wait(lock, [this]{
-        return m_killthreads || !m_work_queue.empty();
-      });  
-      // wake up wh m_work_queue is NOT empty or ~ThreadPool() is called
-      if (m_killthreads && m_work_queue.empty()) {
-        return; // ensure threads finish any remaining tasks before dying 
-      }
-      t = m_work_queue.front();
+      std::unique_lock<std::mutex> lk(m_mtx);
+      m_cond.wait(lk,
+                  [this] { return m_killthreads || !m_work_queue.empty(); });
+      if (m_killthreads && m_work_queue.empty())
+        return;
+      task = std::move(m_work_queue.front());
       m_work_queue.pop_front();
-    } // lock released
-    t.func(t.arg);
-  } 
-}
-
-ThreadPool::ThreadPool(size_t num_threads) : m_mtx(), m_cond(), m_work_queue(), m_killthreads(false), m_thread_vec() {
-  // Initialize our member variables.
-  // to pass thread_loop to a thread you need to specify the function as ThreadPool::thread_loop
-  // and pass the first argument of thread_loop as `this`
-  for (size_t i = 0; i < num_threads; ++i) {
-    m_thread_vec.emplace_back(&ThreadPool::thread_loop, this);
+    }
+    if (task.func) {
+      try {
+        task.func(task.arg);
+      } catch (...) { /* swallow errors from tasks */
+      }
+    }
   }
 }
 
-ThreadPool:: ~ThreadPool() {
+ThreadPool::ThreadPool(size_t num_threads)
+    : m_thread_vec(), m_mtx(), m_cond(), m_work_queue(), m_killthreads(false) {
+  if (num_threads == 0)
+    num_threads = std::thread::hardware_concurrency()
+                      ? std::thread::hardware_concurrency()
+                      : 4;
+  m_thread_vec.reserve(num_threads);
+  for (size_t i = 0; i < num_threads; ++i) {
+    m_thread_vec.emplace_back([this] { thread_loop(); });
+  }
+}
+
+ThreadPool::~ThreadPool() {
   {
-    std::scoped_lock<std::mutex> lock(m_mtx);
+    std::unique_lock<std::mutex> lk(m_mtx);
     m_killthreads = true;
   }
-  // wake ALL threads so they can see m_killthreads = true
-  m_cond.notify_all();  
-  // all jthreads auto-join when m_thread_vec is destroyed
+  m_cond.notify_all();
+  // jthread will join on its destructor; clear vector to join now
+  m_thread_vec.clear();
 }
 
 // Enqueue a Task for dispatch.
 void ThreadPool::dispatch(Task t) {
-    {
-      std::scoped_lock<std::mutex> lock(m_mtx);
-      m_work_queue.push_back(t);
-    }
-    m_cond.notify_one();
+  {
+    std::unique_lock<std::mutex> lk(m_mtx);
+    m_work_queue.push_back(std::move(t));
   }
+  m_cond.notify_one();
+}
 
 }  // namespace searchserver
