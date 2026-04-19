@@ -61,9 +61,6 @@ class ThreadPool {
   ThreadPool(ThreadPool&& other) = delete;
 
  private:
-  // The jthreads jthread_t structures representing each thread.
-  std::vector<std::jthread> m_thread_vec;
-
   // A lock and condition variable that worker threads and the
   // dispatch function use to guard the Task queue.
   std::mutex m_mtx;
@@ -78,6 +75,10 @@ class ThreadPool {
   // picking up its next piece of work; if it is true, the worker
   // threads will kill themselves off.
   bool m_killthreads; // True when ~ThreadPool() is called
+
+  // The jthreads jthread_t structures representing each thread.
+  // moved here so threads spawn before m_mtx and m_cond are constructed won't crash
+  std::vector<std::jthread> m_thread_vec;
 
   // the function that our threads will run
   void thread_loop();

@@ -124,3 +124,24 @@ TEST_CASE("Concurrent", "[Test_ThreadPool]") {
   // but task that ads i should have slept long enough
   // that the o task finishes first
 }
+
+// add test case for dispatch
+TEST_CASE("Dispatch", "[Test_ThreadPool]") {
+  ThreadPool tp(2);
+  std::atomic<int> counter{0};
+
+  ThreadPool::Task t = {[](void* arg) {
+    auto* c = reinterpret_cast<std::atomic<int>*>(arg);
+    (*c)++;
+  }, &counter};
+
+  tp.dispatch(t);
+  tp.dispatch(t);
+  tp.dispatch(t);
+
+  // give threads time to finish
+  usleep(500000);  // 0.5s
+
+  REQUIRE(counter == 3);
+}
+

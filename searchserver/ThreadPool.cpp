@@ -18,7 +18,7 @@ void ThreadPool::thread_loop() {
       m_cond.wait(lock, [this]{
         return m_killthreads || !m_work_queue.empty();
       });  
-      // wake up when m_work_queue is NOT empty or ~ThreadPool() is called
+      // wake up wh m_work_queue is NOT empty or ~ThreadPool() is called
       if (m_killthreads && m_work_queue.empty()) {
         return; // ensure threads finish any remaining tasks before dying 
       }
@@ -29,7 +29,7 @@ void ThreadPool::thread_loop() {
   } 
 }
 
-ThreadPool::ThreadPool(size_t num_threads) : m_thread_vec(), m_mtx(), m_cond(), m_work_queue(), m_killthreads(false) {
+ThreadPool::ThreadPool(size_t num_threads) : m_mtx(), m_cond(), m_work_queue(), m_killthreads(false), m_thread_vec() {
   // Initialize our member variables.
   // to pass thread_loop to a thread you need to specify the function as ThreadPool::thread_loop
   // and pass the first argument of thread_loop as `this`
