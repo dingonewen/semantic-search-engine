@@ -15,8 +15,8 @@ class HttpServer {
   // Constructs the server.
   //   port        -- TCP port to listen on
   //   files_root  -- root directory to serve static files from and index
-  //   num_threads -- number of worker threads in the ThreadPool (default 8)
-  HttpServer(int port, const std::string& files_root, size_t num_threads = 8);
+  //   num_threads -- number of worker threads in the ThreadPool
+  HttpServer(int port, const std::string& files_root, size_t num_threads);
 
   ~HttpServer();
 
@@ -33,4 +33,5 @@ class HttpServer {
 };
 
 }  // namespace searchserver
+
 #endif
