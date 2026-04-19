@@ -15,14 +15,14 @@ void ThreadPool::thread_loop() {
     Task t;
     {
       std::unique_lock<std::mutex> lock(m_mtx);
-      m_cond.wait(lock, [this]{
+      m_cond.wait(lock, [this] {
         return m_killthreads || !m_work_queue.empty();
       });  
       // wake up wh m_work_queue is NOT empty or ~ThreadPool() is called
       if (m_killthreads && m_work_queue.empty()) {
         return; // ensure threads finish any remaining tasks before dying 
       }
-      t = m_work_queue.front();
+      t = std::move(m_work_queue.front());
       m_work_queue.pop_front();
     } // lock released
     t.func(t.arg);
@@ -52,7 +52,7 @@ ThreadPool:: ~ThreadPool() {
 void ThreadPool::dispatch(Task t) {
     {
       std::scoped_lock<std::mutex> lock(m_mtx);
-      m_work_queue.push_back(t);
+      m_work_queue.push_back(std::move(t));
     }
     m_cond.notify_one();
   }

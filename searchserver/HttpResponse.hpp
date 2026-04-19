@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HTTPRESPONSE_HPP_
+#define HTTPRESPONSE_HPP_
 #include <string>
 
 // Builds a complete HTTP/1.1 response string ready to send over a socket.
@@ -14,3 +15,5 @@ std::string make_response(int status,
                           const std::string& body,
                           const std::string& content_type = "text/plain",
                           const std::string& status_text = "");
+
+#endif

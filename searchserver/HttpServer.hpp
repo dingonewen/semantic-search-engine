@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HTTPSERVER_HPP_
+#define HTTPSERVER_HPP_
+
 #include <string>
 #include "InvertedIndex.hpp"
 #include "ThreadPool.hpp"
@@ -31,3 +33,4 @@ class HttpServer {
 };
 
 }  // namespace searchserver
+#endif

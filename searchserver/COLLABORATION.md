@@ -24,29 +24,29 @@ searchserver/
 
 ## Split by Person
 
-### Person A — Server & Concurrency
+### Yiwen — Server & Concurrency
 
-**Owns these files (do not edit without coordinating with A):**
+**Owns these files (do not edit without coordinating with Yiwen):**
 
 | File | Role |
 |------|------|
 | `HttpServer.cpp/hpp` | Accepts connections, dispatches requests to ThreadPool |
 | `HttpRequest.cpp/hpp` | Parses raw HTTP into `Request` struct; `split_terms()` |
 | `HttpResponse.cpp/hpp` | Builds HTTP response strings via `make_response()` |
-| `ThreadPool.cpp/hpp` | Worker threads, task queue, mutex/CV synchronization |
+| `ThreadPool.cpp/hpp` ✅| Worker threads, task queue, mutex/CV synchronization |
 | `searchserver.cpp` | `main()` — wires everything together, parses CLI args |
-| `test_threadpool.cpp` | Tests for ThreadPool |
+| `test_threadpool.cpp` ✅| Tests for ThreadPool |
 
-**Person A's responsibilities:**
+**Yiwen's responsibilities:**
 - Keep the server accepting concurrent connections correctly
 - Ensure `ThreadPool` passes its tests (`./test_suite`)
-- Define and freeze the `Request` struct and `make_response()` signature **early** so Person B can depend on them
+- Define and freeze the `Request` struct and `make_response()` signature **early** so JC can depend on them
 
 ---
 
-### Person B — Search & Content
+### JC — Search & Content
 
-**Owns these files (do not edit without coordinating with B):**
+**Owns these files (do not edit without coordinating with JC):**
 
 | File | Role |
 |------|------|
@@ -55,14 +55,14 @@ searchserver/
 | `searchclient.cpp` | CLI client — URL-encodes queries, sends HTTP GET, prints results |
 | `test_suite.cpp` | End-to-end and search correctness tests |
 
-**Person B's responsibilities:**
+**JC's responsibilities:**
 - Build and test `InvertedIndex` independently using its own unit tests
-- Implement `StaticFile` using the `make_response()` interface agreed with Person A
+- Implement `StaticFile` using the `make_response()` interface agreed with Yiwen
 - Keep `searchclient` working against the running server
 
 ---
 
-## Shared Interface Contract (agree on this first!)
+## Shared Interface Contract (agree on this first✅)
 
 These are the **only touch points** between the two halves. Lock them down before coding:
 
@@ -89,7 +89,7 @@ std::string make_response(int status,
 std::vector<std::pair<std::string, int>>
     search_and_rank(const std::vector<std::string>& terms) const;
 ```
-`HttpServer` calls this — Person A calls into Person B's code here. **Do not change the signature without notifying both sides.**
+`HttpServer` calls this — Yiwen calls into JC's code here. **Do not change the signature without notifying both sides.**
 
 ---
 
@@ -104,7 +104,7 @@ std::vector<std::pair<std::string, int>>
 2. **Never edit the other person's files** unless you open a PR/discussion first.
 
 3. **Shared files** (`Makefile`, `test_suite.cpp`) — coordinate before editing:
-   - For `Makefile`: Person A adds server-side build rules; Person B adds search-side rules. Edit in separate commits and merge carefully.
+   - For `Makefile`: Yiwen adds server-side build rules; JC adds search-side rules. Edit in separate commits and merge carefully.
    - For `test_suite.cpp`: each person adds their own `TEST_CASE` blocks only.
 
 4. **Sync frequently** — rebase onto `main` at least once a day:

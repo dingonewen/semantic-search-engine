@@ -1,4 +1,6 @@
-#pragma once
+#ifndef HTTPREQUEST_HPP_
+#define HTTPREQUEST_HPP_
+
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -18,3 +20,5 @@ Request parse_request(const std::string& raw);
 // Splits a URL query string (e.g. "hello+world" or "hello%20world") into
 // individual lowercase search terms. Returns an empty vector if query is empty.
 std::vector<std::string> split_terms(const std::string& query);
+
+#endif
