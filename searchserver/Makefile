@@ -14,7 +14,7 @@ HPP_SOURCE_FILES = ThreadPool.hpp
 all: test_suite searchserver searchclient
 
 # build a minimal searchserver binary for the assignment demo
-SRV_OBJS = searchserver.o HttpServer.o Request.o Response.o StaticFile.o InvertedIndex.o ThreadPool.o
+SRV_OBJS = searchserver.o HttpServer.o HttpRequest.o HttpResponse.o StaticFile.o InvertedIndex.o ThreadPool.o
 
 searchserver: $(SRV_OBJS)
 	$(CXX) $(CXXFLAGS) -o searchserver $(SRV_OBJS)
@@ -22,27 +22,20 @@ searchserver: $(SRV_OBJS)
 searchserver.o: searchserver.cpp HttpServer.hpp
 	$(CXX) $(CXXFLAGS) -c searchserver.cpp
 
-HttpServer.o: HttpServer.cpp HttpServer.hpp Request.hpp Response.hpp StaticFile.hpp InvertedIndex.hpp ThreadPool.hpp
+HttpServer.o: HttpServer.cpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp StaticFile.hpp InvertedIndex.hpp ThreadPool.hpp
 	$(CXX) $(CXXFLAGS) -c HttpServer.cpp
 
-Request.o: Request.cpp Request.hpp
-	$(CXX) $(CXXFLAGS) -c Request.cpp
+HttpRequest.o: HttpRequest.cpp HttpRequest.hpp
+	$(CXX) $(CXXFLAGS) -c HttpRequest.cpp
 
-Response.o: Response.cpp Response.hpp
-	$(CXX) $(CXXFLAGS) -c Response.cpp
+HttpResponse.o: HttpResponse.cpp HttpResponse.hpp
+	$(CXX) $(CXXFLAGS) -c HttpResponse.cpp
 
-StaticFile.o: StaticFile.cpp StaticFile.hpp Response.hpp
+StaticFile.o: StaticFile.cpp StaticFile.hpp HttpResponse.hpp
 	$(CXX) $(CXXFLAGS) -c StaticFile.cpp
 
 InvertedIndex.o: InvertedIndex.cpp InvertedIndex.hpp
 	$(CXX) $(CXXFLAGS) -c InvertedIndex.cpp
-
-# client shell
-client_shell: client_shell.o
-	$(CXX) $(CXXFLAGS) -o client_shell client_shell.o
-
-client_shell.o: client_shell.cpp client_shell.hpp
-	$(CXX) $(CXXFLAGS) -c client_shell.cpp
 
 # searchclient
 searchclient: searchclient.o
@@ -69,7 +62,7 @@ ThreadPool.o: ThreadPool.cpp ThreadPool.hpp
 	$(CXX) $(CXXFLAGS) -c $<
 
 clean:
-	rm -f *.o *~ test_suite
+	rm -f *.o *~ test_suite searchserver searchclient
 
 tidy-check: 
 	clang-tidy-19 \
