@@ -10,7 +10,7 @@ namespace searchserver {
 // grab work off the queue.  Threads return when they notice that
 // m_killthreads is true.
 void ThreadPool::thread_loop() {
-  // TODO
+
 }
 
 ThreadPool::ThreadPool(size_t num_threads) : m_thread_vec(), m_mtx(), m_cond(), m_work_queue(), m_killthreads(false) {
@@ -23,7 +23,7 @@ ThreadPool::ThreadPool(size_t num_threads) : m_thread_vec(), m_mtx(), m_cond(), 
 }
 
 ThreadPool:: ~ThreadPool() {
-  // TODO
+  
 }
 
 // Enqueue a Task for dispatch.
