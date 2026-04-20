@@ -1,13 +1,13 @@
 #ifndef THREADPOOL_HPP_
 #define THREADPOOL_HPP_
 
-#include <thread>   // for jthread
+#include <any>
+#include <condition_variable>
 #include <cstdint>  // for uint32_t, etc.
 #include <deque>    // for std::deque
-#include <vector>   // for std::vector
 #include <mutex>
-#include <condition_variable>
-#include <any>
+#include <thread>  // for jthread
+#include <vector>  // for std::vector
 
 namespace searchserver {
 
@@ -41,7 +41,7 @@ class ThreadPool {
   // argument is a void* to support "generic" arguments similar to pthread
   // (Note: there are nicer ways to handle this in C++ but this is probably
   //  simpler for what we have covered in class. Namely std::any)
-  typedef void (*thread_task_fn)(void *arg);
+  typedef void (*thread_task_fn)(void* arg);
 
   struct Task {
     // The dispatch function.
@@ -60,9 +60,6 @@ class ThreadPool {
   ThreadPool(ThreadPool&& other) = delete;
 
  private:
-  // The pthreads pthread_t structures representing each thread.
-  std::vector<std::jthread> m_thread_vec;
-
   // The following fields are public so that
   // the worker threads can easily get access to these
 
@@ -80,6 +77,9 @@ class ThreadPool {
   // picking up its next piece of work; if it is true, the worker
   // threads will kill themselves off.
   bool m_killthreads;
+
+  // The pthreads pthread_t structures representing each thread.
+  std::vector<std::jthread> m_thread_vec;
 
   // the function that our threads will run
   void thread_loop();

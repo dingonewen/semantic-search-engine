@@ -7,8 +7,9 @@
 // Parameters:
 //   status       -- HTTP status code, e.g. 200, 404, 409
 //   body         -- Response body content (HTML, plain text, binary, etc.)
-//   content_type -- MIME type for the Content-Type header (default "text/plain")
-//   status_text  -- Reason phrase, e.g. "Not Found". Inferred from status if empty.
+//   content_type -- MIME type for the Content-Type header (default
+//   "text/plain") status_text  -- Reason phrase, e.g. "Not Found". Inferred
+//   from status if empty.
 //
 // Returns the full response as a string including headers and body.
 std::string make_response(int status,

@@ -7,8 +7,8 @@ CXXFLAGS += -g3 -gdwarf-4 -Wall -Wpedantic -Wextra -std=c++2b
 
 TESTOBJS = test_threadpool.o test_suite.o catch.o
 
-CPP_SOURCE_FILES = ThreadPool.cpp
-HPP_SOURCE_FILES = ThreadPool.hpp
+CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp
+HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp
 
 
 all: test_suite searchserver searchclient
@@ -46,8 +46,8 @@ searchclient.o: searchclient.cpp
 
 # crawl_demo removed (legacy demo); source retained as placeholder if needed
 
-test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o
-	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o
+test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o HttpRequest.o
+	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o HttpRequest.o
 
 test_suite.o: test_suite.cpp catch.hpp
 	$(CXX) $(CXXFLAGS) -c $<
@@ -67,9 +67,12 @@ clean:
 tidy-check: 
 	clang-tidy-19 \
         --extra-arg=--std=c++2b \
+        --extra-arg=-Wall \
         -warnings-as-errors=* \
         -header-filter=.* \
-        $(CPP_SOURCE_FILES) $(HPP_SOURCE_FILES)
+        -p . \
+        $(CPP_SOURCE_FILES) $(HPP_SOURCE_FILES) \
+        -- -std=c++2b
 
 format:
 	clang-format-19 -i --verbose --style=Chromium $(CPP_SOURCE_FILES) $(HPP_SOURCE_FILES)
