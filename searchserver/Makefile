@@ -46,8 +46,8 @@ searchclient.o: searchclient.cpp
 
 # crawl_demo removed (legacy demo); source retained as placeholder if needed
 
-test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o HttpRequest.o
-	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o HttpRequest.o
+test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o HttpRequest.o HttpResponse.o
+	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o HttpRequest.o HttpResponse.o
 
 test_suite.o: test_suite.cpp catch.hpp
 	$(CXX) $(CXXFLAGS) -c $<
