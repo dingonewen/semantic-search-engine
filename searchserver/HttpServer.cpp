@@ -15,12 +15,24 @@ HttpServer::HttpServer(int port,
 // threadpool, InvertedIndex already have destructor
 HttpServer::~HttpServer() {}
 
-// Blocking function - starts the server accept loop, no return until the
-// process is killed it reads the home page file once at the start, then serves
-// that same string to every client that requests GET /. no direct test case for
-// run since it's not unit-testable
+/*
+run() is the main server loop. In order:
+
+Load home page — read initial_response_path into a string 
+Create socket — open a TCP socket, set SO_REUSEADDR, bind to m_port, call listen()
+Print "accepting connections..."
+Accept loop — forever call accept(), get a client fd, print the client's IP address
+Dispatch — for each accepted client, send it to m_pool as a task
+Client handler (runs in worker thread):
+Read raw bytes until \r\n\r\n
+Call parse_request()
+Route: GET / → home page, GET /query → search results, GET /static/ → file, else → 404
+Send response via make_response()
+Check Connection: close → close socket
+SIGINT — when Ctrl+C is pressed, break the accept loop and clean up
+*/
 int HttpServer::run(const std::string& initial_response_path) {
-  std::ifstream file(initial_response_path);
+  std::ifstream file(initial_response_path);  
   if (!file.is_open()) {
     std::cerr << "Failed to open: " << initial_response_path << std::endl;
     return 1;  // exit code on fatal error
@@ -29,7 +41,7 @@ int HttpServer::run(const std::string& initial_response_path) {
   std::string line;
   while (std::getline(file, line)) {
     home_page += line + '\n';
-  }
+  }   // load homepage done
   return 0;
 }
 
