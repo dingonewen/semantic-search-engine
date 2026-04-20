@@ -42,6 +42,7 @@ int HttpServer::run(const std::string& initial_response_path) {
   while (std::getline(file, line)) {
     home_page += line + '\n';
   }   // load homepage done
+  // TODO: complete the rest
   return 0;
 }
 
