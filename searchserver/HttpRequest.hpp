@@ -1,20 +1,26 @@
-#pragma once
+#ifndef HTTPREQUEST_HPP_
+#define HTTPREQUEST_HPP_
+
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-// Represents a parsed HTTP request.
+// Defines the Request struct and some free functions that parse raw HTTP text
+// into usable data e.g. GET /query?terms=hello+world HTTP/1.1 in spec it
+// assumes clients send legal HTTP/1.1 request
 struct Request {
-  std::string method;   // HTTP verb: "GET", "POST", "PUT", "DELETE", etc.
-  std::string path;     // URL path component, e.g. "/static/books/foo.txt"
-  std::string query;    // Raw query string after '?', e.g. "term1+term2"
-  std::unordered_map<std::string, std::string> headers;  // Header name -> value
+  std::string method;  // GET
+  std::string path;    // /query
+  std::string query;   // terms=hello+world
+  std::unordered_map<std::string, std::string>
+      headers;  // connection: close (case-insensitive)
 };
 
-// Parses a raw HTTP request string (headers only, up to and including the blank
-// line) into a Request struct. Returns a default-constructed Request on failure.
+// split the raw string on \r\n, first line gives method/path/query, remaining
+// lines give headers
 Request parse_request(const std::string& raw);
 
-// Splits a URL query string (e.g. "hello+world" or "hello%20world") into
-// individual lowercase search terms. Returns an empty vector if query is empty.
+// split on + or %20, lowercase each term
 std::vector<std::string> split_terms(const std::string& query);
+
+#endif

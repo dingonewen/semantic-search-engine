@@ -52,7 +52,6 @@ CheckOptions:
   readability-identifier-naming.EnumCase: 'CamelCase'
   readability-identifier-naming.FunctionCase: 'CamelCase'
   readability-identifier-naming.GlobalConstantCase: 'lower_case'
-  readability-identifier-naming.GlobalConstantPrefix: 'k_'
   readability-identifier-naming.GlobalVariableCase: 'lower_case'
   readability-identifier-naming.GlobalVariablePrefix: 'g_'
   readability-identifier-naming.IgnoreMainLikeFunctions: 'true'

@@ -3,7 +3,10 @@
 #include "./ThreadPool.hpp"
 #include "./catch.hpp"
 
+// if you're just incrementing/reading a single integer, use atomic. 
+// If you're protecting a larger data structure (like a std::string or std::deque), use mutex.
 #include <mutex>
+#include <atomic> // avoid data race for counter
 
 using searchserver::ThreadPool;
 
@@ -123,4 +126,22 @@ TEST_CASE("Concurrent", "[Test_ThreadPool]") {
   // added to the threadpool in order of Aio
   // but task that ads i should have slept long enough
   // that the o task finishes first
+}
+
+// add dispatch test case
+TEST_CASE("Dispatch", "[Test_ThreadPool]") {
+  using searchserver::ThreadPool;
+  std::atomic<int> counter{0};
+
+  ThreadPool tp(4);
+
+  for (int i = 0; i < 10; ++i) {
+    ThreadPool::Task t = {[](void* arg) {
+      reinterpret_cast<std::atomic<int>*>(arg)->fetch_add(1);
+    }, &counter};
+    tp.dispatch(t);
+  }
+
+  usleep(500000);  // 0.5s — give threads time to finish
+  REQUIRE(counter == 10);
 }
