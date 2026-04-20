@@ -5,7 +5,7 @@ CXX = clang++-19
 # define useful flags to cc/ld/etc.
 CXXFLAGS += -g3 -gdwarf-4 -Wall -Wpedantic -Wextra -std=c++2b
 
-TESTOBJS = test_threadpool.o test_suite.o catch.o
+TESTOBJS = test_threadpool.o test_invertedindex.o test_suite.o catch.o
 
 CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp
 HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp
@@ -46,8 +46,8 @@ searchclient.o: searchclient.cpp
 
 # crawl_demo removed (legacy demo); source retained as placeholder if needed
 
-test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o HttpRequest.o HttpResponse.o
-	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o HttpRequest.o HttpResponse.o
+test_suite: $(TESTOBJS) $(COMMON_OBJS) $(HEADERS) ThreadPool.o HttpRequest.o HttpResponse.o InvertedIndex.o
+	$(CXX) $(CXXFLAGS) -o $@ $(TESTOBJS) ThreadPool.o HttpRequest.o HttpResponse.o InvertedIndex.o
 
 test_suite.o: test_suite.cpp catch.hpp
 	$(CXX) $(CXXFLAGS) -c $<
@@ -56,6 +56,9 @@ catch.o: catch.cpp catch.hpp
 	$(CXX) $(CXXFLAGS) -c $<
 
 test_threadpool.o: test_threadpool.cpp catch.hpp ThreadPool.hpp
+	$(CXX) $(CXXFLAGS) -c $<
+
+test_invertedindex.o: test_invertedindex.cpp catch.hpp InvertedIndex.hpp
 	$(CXX) $(CXXFLAGS) -c $<
 
 ThreadPool.o: ThreadPool.cpp ThreadPool.hpp
