@@ -7,6 +7,10 @@
 // Supports building from a directory, incremental updates, and ranked search.
 class InvertedIndex {
  public:
+  // Split a string into a vector of string using std::isalnum
+  // delimiter: any charactor that is not alphanumeric
+  static std::vector<std::string> tokenize(const std::string& s);
+
   // Recursively reads all files under root and indexes every word found.
   // Input:  root -- path to the directory to index (e.g. "test_tree")
   void build(const std::string& root);
@@ -27,6 +31,6 @@ class InvertedIndex {
       const std::vector<std::string>& terms) const;
 
  private:
-  // idx[word][filepath] = count of 'word' in 'filepath'
-  std::unordered_map<std::string, std::unordered_map<std::string, int>> idx;
+  // m_count[word][filepath] = count of 'word' in 'filepath'
+  std::unordered_map<std::string, std::unordered_map<std::string, int>> m_count;
 };
