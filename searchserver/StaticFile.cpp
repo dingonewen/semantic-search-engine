@@ -40,5 +40,3 @@ std::string StaticGet(const std::string& files_root,
   // not found
   return MakeResponse(404, "<h1>404 Not Found</h1>", "test/html");
 }
-
-std::string StaticPut()
