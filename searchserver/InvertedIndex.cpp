@@ -6,9 +6,11 @@
 
 using namespace std::filesystem;
 
+// Split a string into a vector of string using std::isalnum
+// delimiter: any charactor that is not alphanumeric
 // input: "Hello, world!"
 // output: ["hello", "world"]
-std::vector<std::string> InvertedIndex::tokenize(const std::string& s) {
+static std::vector<std::string> Tokenize(const std::string& s) {
   std::vector<std::string> res;
   std::string curr;
   // scan the input string char by char
@@ -29,7 +31,7 @@ std::vector<std::string> InvertedIndex::tokenize(const std::string& s) {
   return res;
 }
 
-void InvertedIndex::build(const std::string& root) {
+void InvertedIndex::Build(const std::string& root) {
   m_count.clear();
   for (auto& p : recursive_directory_iterator(root)) {
     // skip folder and symlink
@@ -43,7 +45,7 @@ void InvertedIndex::build(const std::string& root) {
     }
     std::string line;
     while (std::getline(in, line)) {
-      auto tokens = tokenize(line);
+      auto tokens = Tokenize(line);
       for (auto& token : tokens) {
         m_count[token][path]++;
       }
@@ -51,7 +53,7 @@ void InvertedIndex::build(const std::string& root) {
   }
 }
 
-void InvertedIndex::remove_file(const std::string& path) {
+void InvertedIndex::RemoveFile(const std::string& path) {
   for (auto it = m_count.begin(); it != m_count.end();) {
     it->second.erase(path);
     // erase empty entries such as "world": {}
@@ -63,8 +65,8 @@ void InvertedIndex::remove_file(const std::string& path) {
   }
 }
 
-void InvertedIndex::add_file(const std::string& path) {
-  remove_file(path);  // re-index: clear old entries first
+void InvertedIndex::AddFile(const std::string& path) {
+  RemoveFile(path);  // re-index: clear old entries first
   std::ifstream in(path);
   if (!in) {
     return;
@@ -72,14 +74,14 @@ void InvertedIndex::add_file(const std::string& path) {
   // process file and add entry to m_count
   std::string line;
   while (std::getline(in, line)) {
-    auto tokens = tokenize(line);
+    auto tokens = Tokenize(line);
     for (auto& token : tokens) {
       m_count[token][path]++;
     }
   }
 }
 
-std::vector<std::pair<std::string, int>> InvertedIndex::search_and_rank(
+std::vector<std::pair<std::string, int>> InvertedIndex::SearchAndRank(
     const std::vector<std::string>& terms) const {
   // map file to frequency: the number of terms appeared in each file
   std::unordered_map<std::string, int> scores;
