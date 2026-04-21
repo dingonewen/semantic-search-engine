@@ -12,7 +12,8 @@ struct Request {
   std::string method;  // GET
   std::string path;    // /query
   std::string query;   // terms=hello+world
-  std::unordered_map<std::string, std::string> headers;  // connection:close (case-insensitive)
+  std::unordered_map<std::string, std::string>
+      headers;       // connection:close (case-insensitive)
   std::string body;  // used in HttpServer, body only in POST / PUT
 };
 
