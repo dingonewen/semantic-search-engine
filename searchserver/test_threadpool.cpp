@@ -38,7 +38,7 @@ TEST_CASE("Basic", "[Test_ThreadPool]") {
   for (int i = 0; i < 300; i++) {
     ThreadPool::Task next_t = {TestTaskFn, nullptr};
 
-    tp->dispatch(next_t);
+    tp->Dispatch(next_t);
   }
   usleep(1250000);  // 1.25s
 
@@ -96,9 +96,9 @@ TEST_CASE("Concurrent", "[Test_ThreadPool]") {
   ThreadPool::Task task1 = {TestConcurrentTaskFn, arg1};
   ThreadPool::Task task2 = {TestConcurrentTaskFn, arg2};
 
-  tp->dispatch(task0);
-  tp->dispatch(task1);
-  tp->dispatch(task2);
+  tp->Dispatch(task0);
+  tp->Dispatch(task1);
+  tp->Dispatch(task2);
   usleep(4250000);  // 4.25s
 
   int tries = 0;
@@ -139,7 +139,7 @@ TEST_CASE("Dispatch", "[Test_ThreadPool]") {
     ThreadPool::Task t = {[](void* arg) {
       reinterpret_cast<std::atomic<int>*>(arg)->fetch_add(1);
     }, &counter};
-    tp.dispatch(t);
+    tp.Dispatch(t);
   }
 
   usleep(500000);  // 0.5s — give threads time to finish

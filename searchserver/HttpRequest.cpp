@@ -1,107 +1,91 @@
 #include "./HttpRequest.hpp"
-// these two free functions are functions for struct Request, not belong to
-// class
 
-#include <algorithm>  // transform
-#include <sstream>    // istringstream
+#include <algorithm>  // std::ranges::transform
+#include <cctype>     // ::tolower
+#include <cstddef>    // size_t
+#include <sstream>    // std::istringstream
+#include <string>
+#include <vector>
 
-// split the raw string on \r\n, first line gives method/path/query, remaining
-// lines give headers
-/*
-input:
-GET /query?terms=hello+world HTTP/1.1\r\n
-Host: localhost:5950\r\n
-Connection: close\r\n
-\r\n
-
-output: a Request struct with
-method = "GET"
-path = "/query"
-query = "terms=hello+world"
-headers = {"host": "localhost:5950", "connection": "close"}
-*/
-Request parse_request(const std::string& raw) {
+auto ParseRequest(const std::string& raw) -> Request {
   Request req;
   std::istringstream ss(raw);
-  std::string first_line;  // only first line has HTTP method, path, query, rest
-                           // lines are all headers
+  std::string first_line;
   std::getline(ss, first_line, '\n');
-  // parse the first line
+
   std::istringstream first_ss(first_line);
-  std::string method, path, query;
+  std::string method;
+  std::string path;
+  std::string version;
   std::getline(first_ss, method, ' ');
   std::getline(first_ss, path, ' ');
-  std::getline(first_ss, query, ' ');
+  std::getline(first_ss, version, ' ');
+
   if (method.empty() || path.empty()) {
-    return req;  // failure — return default
+    return req;
   }
   req.method = method;
-  // split path on '?'; take before ? as path, after as query
-  size_t pos = path.find('?');
-  if (pos != std::string::npos) {  // if ? is found, not every request has query
+
+  const size_t pos = path.find('?');
+  if (pos != std::string::npos) {
     req.path = path.substr(0, pos);
     req.query = path.substr(pos + 1);
   } else {
     req.path = path;
     req.query = "";
   }
-  // parse rest of the lines for headers map (and body for POST/PUT)
+
   std::string line;
   while (std::getline(ss, line, '\n')) {
-    if (!line.empty() && line.back() == '\r') {  // check \r\n
+    if (!line.empty() && line.back() == '\r') {
       line.pop_back();
     }
-    if (line.empty())
-      break;                        // blank line = end of headers
-    size_t colon = line.find(':');  // ensure it's headers not other information
+    if (line.empty()) {
+      break;
+    }
+    const size_t colon = line.find(':');
     if (colon != std::string::npos) {
       std::string key = line.substr(0, colon);
-      std::string val = line.substr(colon + 2);  // skip ": "
-      // lowercase key since header keys are case-insensitive (values are not)
-      std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+      const std::string val = line.substr(colon + 2);
+      std::ranges::transform(key, key.begin(), ::tolower);
       req.headers[key] = val;
     }
-    auto it =
-        req.headers.find("content-length");  // parsing the body (for POST/PUT)
-    if (it != req.headers.end()) {
-      size_t body_len = std::stoul(it->second);
-      size_t sep = raw.find("\r\n\r\n");
-      if (sep != std::string::npos) {
-        req.body = raw.substr(sep + 4, body_len);
-      }
+  }
+
+  const auto it = req.headers.find("content-length");
+  if (it != req.headers.end()) {
+    const size_t body_len = std::stoul(it->second);
+    const size_t sep = raw.find("\r\n\r\n");
+    if (sep != std::string::npos) {
+      req.body = raw.substr(sep + 4, body_len);
     }
   }
+
   return req;
 }
 
-// split on + or %20, lowercase each term
-/*
-Input: "terms=hello+world"
-Output: ["hello", "world"]
-*/
-std::vector<std::string> split_terms(const std::string& query) {
+auto SplitTerms(const std::string& query) -> std::vector<std::string> {
   std::vector<std::string> res;
   if (query.empty()) {
     return res;
   }
 
   std::string q = query;
-  size_t eq = q.find('=');  // remove "terms=" prefix
+  const size_t eq = q.find('=');
   if (eq != std::string::npos) {
     q = q.substr(eq + 1);
   }
 
   size_t pos = 0;
   while ((pos = q.find("%20", pos)) != std::string::npos) {
-    q.replace(pos, 3, "+");  // replace %20 with +
+    q.replace(pos, 3, "+");
   }
 
   std::istringstream ss(q);
   std::string token;
-  while (std::getline(ss, token, '+')) {  // split on + and lowercase each term
+  while (std::getline(ss, token, '+')) {
     if (!token.empty()) {
-      std::transform(token.begin(), token.end(), token.begin(),
-                     ::tolower);  // search query is case-insensitive
+      std::ranges::transform(token, token.begin(), ::tolower);
       res.push_back(token);
     }
   }

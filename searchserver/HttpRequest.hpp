@@ -5,23 +5,20 @@
 #include <unordered_map>
 #include <vector>
 
-// Defines the Request struct and some free functions that parse raw HTTP text
-// into usable data e.g. GET /query?terms=hello+world HTTP/1.1 in spec it
-// assumes clients send legal HTTP/1.1 request
+// Parsed HTTP request: method, path, query string, headers, and body.
 struct Request {
-  std::string method;  // GET
-  std::string path;    // /query
-  std::string query;   // terms=hello+world
-  std::unordered_map<std::string, std::string>
-      headers;       // connection:close (case-insensitive)
-  std::string body;  // used in HttpServer, body only in POST / PUT
+  std::string method;
+  std::string path;
+  std::string query;
+  std::unordered_map<std::string, std::string> headers;
+  std::string body;
 };
 
-// split the raw string on \r\n, first line gives method/path/query, remaining
-// lines give headers
-Request parse_request(const std::string& raw);
+// Parse raw HTTP request bytes (up to and including blank line) into a Request.
+// Returns a default-constructed Request on failure.
+auto ParseRequest(const std::string& raw) -> Request;
 
-// split on + or %20, lowercase each term
-std::vector<std::string> split_terms(const std::string& query);
+// Split URL query string (e.g. "terms=hello+world") into lowercase terms.
+auto SplitTerms(const std::string& query) -> std::vector<std::string>;
 
 #endif
