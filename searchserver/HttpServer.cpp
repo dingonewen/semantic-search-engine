@@ -74,7 +74,7 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
   }
   if (r.path == "/query") {
     auto terms = SplitTerms(r.query);
-    auto results = ctx->index->search_and_rank(terms);
+    auto results = ctx->index->SearchAndRank(terms);
     std::string body = ctx->home_page;
     std::string links;
     for (const auto& p : results) {
@@ -170,7 +170,7 @@ HttpServer::HttpServer(int port, std::string files_root, size_t num_threads)
       m_files_root(std::move(files_root)),
       m_pool(num_threads),
       m_index() {
-  m_index.build(m_files_root);  // m_index is a search index maps words to the
+  m_index.Build(m_files_root);  // m_index is a search index maps words to the
                                 // files that contain them
 }
 
