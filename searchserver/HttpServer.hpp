@@ -22,7 +22,7 @@ class HttpServer {
 
   // Starts the server accept loop (blocking — does not return until the process
   // is killed). Loads the initial HTML response from initial_response_path and
-  // serves it at "/". Returns a non-zero exit code on fatal error.
+  // serves it at "/".Returns a non-zero exit code on fatal error
   int run(const std::string& initial_response_path);
 
  private:

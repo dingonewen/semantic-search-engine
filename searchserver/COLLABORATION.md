@@ -30,7 +30,7 @@ searchserver/
 
 | File | Role |
 |------|------|
-| `HttpServer.cpp/hpp` | Accepts connections, dispatches requests to ThreadPool |
+| `HttpServer.cpp/hpp` ✅| Accepts connections, dispatches requests to ThreadPool |
 | `HttpRequest.cpp/hpp` ✅| Parses raw HTTP into `Request` struct; `split_terms()` |
 | `HttpResponse.cpp/hpp` ✅| Builds HTTP response strings via `make_response()` |
 | `ThreadPool.cpp/hpp` ✅| Worker threads, task queue, mutex/CV synchronization |
