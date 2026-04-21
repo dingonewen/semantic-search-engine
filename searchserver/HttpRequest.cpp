@@ -20,7 +20,7 @@ path = "/query"
 query = "terms=hello+world"
 headers = {"host": "localhost:5950", "connection": "close"}
 */
-Request parse_request(const std::string& raw) {
+Request ParseRequest(const std::string& raw) {
   Request req;
   std::istringstream ss(raw);
   std::string first_line;  // only first line has HTTP method, path, query, rest
@@ -79,7 +79,7 @@ Request parse_request(const std::string& raw) {
 Input: "terms=hello+world"
 Output: ["hello", "world"]
 */
-std::vector<std::string> split_terms(const std::string& query) {
+std::vector<std::string> SplitTerms(const std::string& query) {
   std::vector<std::string> res;
   if (query.empty()) {
     return res;

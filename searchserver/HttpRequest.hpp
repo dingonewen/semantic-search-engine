@@ -19,9 +19,9 @@ struct Request {
 
 // split the raw string on \r\n, first line gives method/path/query, remaining
 // lines give headers
-Request parse_request(const std::string& raw);
+Request ParseRequest(const std::string& raw);
 
 // split on + or %20, lowercase each term
-std::vector<std::string> split_terms(const std::string& query);
+std::vector<std::string> SplitTerms(const std::string& query);
 
 #endif

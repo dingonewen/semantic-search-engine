@@ -11,9 +11,9 @@ Content-Length: 42\r\n
 */
 // Returns the full response as a string including headers and body
 // caller can omit 3rd and 4th argument
-std::string make_response(int status,
-                          const std::string& body,
-                          const std::string& content_type = "text/plain",
-                          const std::string& status_text = "");
+std::string MakeResponse(int status,
+                         const std::string& body,
+                         const std::string& content_type = "text/plain",
+                         const std::string& status_text = "");
 
 #endif

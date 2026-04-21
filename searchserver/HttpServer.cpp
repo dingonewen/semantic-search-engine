@@ -41,7 +41,7 @@ struct ClientCtx {
 // each worker thread runs for one client
 /*
 1. Reads the HTTP request from client_fd
-2. Calls parse_request()
+2. Calls ParseRequest()
 3. Routes to the right response (/, /query, /static/)
 4. Sends the response back
 5. Closes client_fd and deletes ctx when done
@@ -73,14 +73,14 @@ static void HandleClient(void* arg) {
     if (n <= 0)
       break;
 
-    Request r = parse_request(raw);
+    Request r = ParseRequest(raw);
 
     std::string response;
     if (r.method == "GET") {
       if (r.path == "/" || r.path.empty()) {
-        response = make_response(200, ctx->home_page, "text/html");
+        response = MakeResponse(200, ctx->home_page, "text/html");
       } else if (r.path == "/query") {
-        auto terms = split_terms(r.query);
+        auto terms = SplitTerms(r.query);
         auto results = ctx->index->search_and_rank(terms);
         std::string body = ctx->home_page;
         std::string links;
@@ -89,12 +89,12 @@ static void HandleClient(void* arg) {
                    "</a> [" + std::to_string(p.second) + "]</li>\n";
         }
         body += "<ul>\n" + links + "</ul>\n";
-        response = make_response(200, body, "text/html");
+        response = MakeResponse(200, body, "text/html");
       } else if (r.path.rfind("/static/", 0) == 0) {
         std::string rel = r.path.substr(8);
         response = serve_static(ctx->files_root, rel);
       } else {
-        response = make_response(404, "<h1>404 Not Found</h1>", "text/html");
+        response = MakeResponse(404, "<h1>404 Not Found</h1>", "text/html");
       }
     } else if (r.path.rfind("/static/", 0) == 0) {
       std::string rel = r.path.substr(8);
@@ -107,11 +107,11 @@ static void HandleClient(void* arg) {
       } else if (r.method == "DELETE") {
         response = static_delete(ctx->files_root, rel);
       } else {
-        response = make_response(501, "Not Implemented", "text/plain",
+        response = MakeResponse(501, "Not Implemented", "text/plain",
                                  "Not Implemented");
       }
     } else {
-      response = make_response(404, "<h1>404 Not Found</h1>", "text/html");
+      response = MakeResponse(404, "<h1>404 Not Found</h1>", "text/html");
     }
     // send response (loop to handle short writes)
     ssize_t to_send = static_cast<ssize_t>(response.size());
@@ -143,9 +143,9 @@ address
 5. Dispatch — for each accepted client, send it to m_pool as a task
 6. Client handler (runs in worker thread):
     Read raw bytes until \r\n\r\n
-    Call parse_request()
+    Call ParseRequest()
     Route: GET / → home page, GET /query → search results, GET /static/ → file,
-else → 404 Send response via make_response() Check Connection: close → close
+else → 404 Send response via MakeResponse() Check Connection: close → close
 socket
 7. SIGINT — when Ctrl+C is pressed, break the accept loop and clean up
 */

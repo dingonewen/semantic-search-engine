@@ -4,7 +4,7 @@
 // Builds a complete HTTP/1.1 response string ready to send over a socket
 // Given a status code, body, and content type, it assembles the response in the
 // correct HTTP format
-std::string make_response(int status,
+std::string MakeResponse(int status,
                           const std::string& body,
                           const std::string& content_type,
                           const std::string& status_text) {
