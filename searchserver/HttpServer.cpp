@@ -1,5 +1,10 @@
 #include "./HttpServer.hpp"
 #include "./InvertedIndex.hpp" // ClientCtx
+#include "./HttpRequest.hpp"
+#include "./HttpResponse.hpp"  // MakeResponse
+#include "./StaticFile.hpp"  // StaticPut, StatisDelete, ServeStatic
+
+
 #include <fstream>
 #include <iostream>
 #include <stdlib.h> // EXIT_SUCCESS
@@ -39,11 +44,78 @@ struct ClientCtx {
 4. Sends the response back
 5. Closes client_fd and deletes ctx when done
 */
-static void HandleClient(void* arg) {  
-    ClientCtx* ctx = static_cast<ClientCtx*>(arg);
-    // TODO: implement
-    close(ctx->client_fd);
-    delete ctx;
+// Differet from read server_accept_rw_close.cpp: until \r\n\r\n → parse → route to different handlers 
+// → send appropriate response → check Connection: close → loop back and read next request
+static void HandleClient(void* arg) {
+  ClientCtx* ctx = static_cast<ClientCtx*>(arg);
+  // keep-alive loop: keep reading requests until Connection: close
+  while (true) {
+    // read until \r\n\r\n (end of headers)
+    std::string raw;
+    std::array<char, 4096> buf{};
+    ssize_t n;
+    while ((n = read(ctx->client_fd, buf.data(), buf.size() - 1)) > 0) {
+      raw.append(buf.data(), static_cast<size_t>(n));
+      if (raw.find("\r\n\r\n") != std::string::npos) break;
+      if (n == -1) {
+        if ((errno == EAGAIN) || (errno == EINTR)) continue;
+        break;
+      }
+    }
+    if (n <= 0) break;  // client disconnected
+
+    Request r = parse_request(raw);
+
+    std::string response;
+    if (r.method == "GET") {
+      if (r.path == "/" || r.path.empty()) {
+        response = make_response(200, ctx->home_page, "text/html");
+      } else if (r.path == "/query") {
+        auto terms = split_terms(r.query);
+        auto results = ctx->index->search_and_rank(terms);
+        std::string body = ctx->home_page;
+        std::string links;
+        for (auto& p : results) {
+          links += "<li><a href=\"/static/" + p.first + "\">"
+                + p.first + "</a> [" + std::to_string(p.second) + "]</li>\n";
+        }
+        body += "<ul>\n" + links + "</ul>\n";
+        response = make_response(200, body, "text/html");
+      } else if (r.path.rfind("/static/", 0) == 0) {
+        std::string rel = r.path.substr(8);
+        response = serve_static(ctx->files_root, rel);
+      } else {
+        response = make_response(404, "<h1>404 Not Found</h1>", "text/html");
+      }
+    } else if (r.path.rfind("/static/", 0) == 0) {
+      std::string rel = r.path.substr(8);
+      if (r.method == "PUT") {
+        response = static_put(ctx->files_root, rel, r.body, true);   // POST has body
+      } else if (r.method == "POST") {
+        response = static_put(ctx->files_root, rel, r.body, false);  // PUT has body
+      } else if (r.method == "DELETE") {
+        response = static_delete(ctx->files_root, rel);
+      } else {
+        response = make_response(501, "Not Implemented", "text/plain", "Not Implemented");
+      }
+    } else {
+      response = make_response(404, "<h1>404 Not Found</h1>", "text/html");
+    }
+    // send response (loop to handle short writes)
+    ssize_t to_send = static_cast<ssize_t>(response.size());
+    const char* ptr = response.data();
+    while (to_send > 0) {
+      ssize_t w = write(ctx->client_fd, ptr, static_cast<size_t>(to_send));
+      if (w <= 0) break;
+      to_send -= w;
+      ptr += w;
+    }
+    // check Connection: close
+    auto it = r.headers.find("connection");
+    if (it != r.headers.end() && it->second == "close") break;
+  }
+  close(ctx->client_fd);
+  delete ctx;
 }
 
 /*

@@ -45,7 +45,7 @@ Request parse_request(const std::string& raw) {
     req.path = path;
     req.query = "";
   }
-  // parse rest of the lines for headers map
+  // parse rest of the lines for headers map (and body for POST/PUT)
   std::string line;
   while (std::getline(ss, line, '\n')) {
     if (!line.empty() && line.back() == '\r') {  // check \r\n
@@ -60,6 +60,14 @@ Request parse_request(const std::string& raw) {
       // lowercase key since header keys are case-insensitive (values are not)
       std::transform(key.begin(), key.end(), key.begin(), ::tolower);
       req.headers[key] = val;
+    }
+    auto it = req.headers.find("content-length"); // parsing the body (for POST/PUT)
+    if (it != req.headers.end()) {
+      size_t body_len = std::stoul(it->second);
+      size_t sep = raw.find("\r\n\r\n");
+      if (sep != std::string::npos) {
+          req.body = raw.substr(sep + 4, body_len);
+      }
     }
   }
   return req;
