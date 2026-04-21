@@ -1,7 +1,9 @@
 #ifndef HTTPSERVER_HPP_
 #define HTTPSERVER_HPP_
 
+#include <cstddef>
 #include <string>
+
 #include "InvertedIndex.hpp"
 #include "ThreadPool.hpp"
 
@@ -16,14 +18,19 @@ class HttpServer {
   //   port        -- TCP port to listen on
   //   files_root  -- root directory to serve static files from and index
   //   num_threads -- number of worker threads in the ThreadPool
-  HttpServer(int port, const std::string& files_root, size_t num_threads);
+  HttpServer(int port, std::string files_root, size_t num_threads);
 
-  ~HttpServer();
+  ~HttpServer() = default;
+
+  HttpServer(const HttpServer&) = delete;
+  HttpServer(HttpServer&&) = delete;
+  auto operator=(const HttpServer&) -> HttpServer& = delete;
+  auto operator=(HttpServer&&) -> HttpServer& = delete;
 
   // Starts the server accept loop (blocking — does not return until the process
   // is killed). Loads the initial HTML response from initial_response_path and
-  // serves it at "/".Returns a non-zero exit code on fatal error
-  int run(const std::string& initial_response_path);
+  // serves it at "/". Returns a non-zero exit code on fatal error.
+  auto Run(const std::string& initial_response_path) -> int;
 
  private:
   int m_port;
@@ -34,4 +41,4 @@ class HttpServer {
 
 }  // namespace searchserver
 
-#endif
+#endif  // HTTPSERVER_HPP_
