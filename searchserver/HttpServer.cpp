@@ -4,7 +4,7 @@
 #include "./InvertedIndex.hpp"
 #include "./StaticFile.hpp"  // serve_static, static_put, static_delete
 
-#include <arpa/inet.h>
+#include <arpa/inet.h>  
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
@@ -28,6 +28,8 @@ void SigintHandler(int /*signo*/) {
 
 namespace searchserver {
 
+// Internal helpers below are in an anonymous namespace (not unit-testable
+// directly). They are covered through integration testing via HttpServer::Run().
 namespace {
 
 // bundles everything the worker thread needs to handle one client connection
