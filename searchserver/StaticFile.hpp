@@ -2,9 +2,10 @@
 #define STATICFILE_HPP_
 #include <string>
 
-// Reads a file from disk and returns a complete HTTP response string.
-// files_root: root directory the server is serving from
-// relpath: path relative to files_root (e.g. "books/foo.txt")
+// Handles GET request: fines a file and returns its contents as an HTTP
+// response
+// files_root: the server's root directory "test_tree"
+// relpath: the path from the request URL "books/artofwar.txt"
 // Returns a 200 response with the file contents, or 404 if not found.
 std::string serve_static(const std::string& files_root,
                          const std::string& relpath);
