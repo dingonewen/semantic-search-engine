@@ -1,19 +1,19 @@
 #include "./HttpServer.hpp"
-#include "./InvertedIndex.hpp" // ClientCtx
-#include "./HttpRequest.hpp"
+#include "./InvertedIndex.hpp" 
+#include "./HttpRequest.hpp"  // ParseRequest
 #include "./HttpResponse.hpp"  // MakeResponse
 #include "./StaticFile.hpp"  // StaticPut, StatisDelete, ServeStatic
-
 
 #include <fstream>
 #include <iostream>
 #include <stdlib.h> // EXIT_SUCCESS
 #include <string.h>  // strerror()
-
 #include <arpa/inet.h>  // socket()
 #include <unistd.h> // close socket fd
+#include <signal.h> // SIGINT handling
 
-
+static volatile sig_atomic_t g_done = 0;  // SIGINT handling
+static void SigintHandler(int) { g_done = 1; } // oarameter is unused, omitted to pass tidy-check
 
 namespace searchserver {
 
@@ -54,15 +54,17 @@ static void HandleClient(void* arg) {
     std::string raw;
     std::array<char, 4096> buf{};
     ssize_t n;
-    while ((n = read(ctx->client_fd, buf.data(), buf.size() - 1)) > 0) {
+    while (true) {
+      n = read(ctx->client_fd, buf.data(), buf.size() - 1);
+      if (n < 0) {
+          if ((errno == EAGAIN) || (errno == EINTR)) continue;
+          break;
+      }
+      if (n == 0) break;  // client disconnected
       raw.append(buf.data(), static_cast<size_t>(n));
       if (raw.find("\r\n\r\n") != std::string::npos) break;
-      if (n == -1) {
-        if ((errno == EAGAIN) || (errno == EINTR)) continue;
-        break;
-      }
     }
-    if (n <= 0) break;  // client disconnected
+    if (n <= 0) break;
 
     Request r = parse_request(raw);
 
@@ -90,9 +92,9 @@ static void HandleClient(void* arg) {
     } else if (r.path.rfind("/static/", 0) == 0) {
       std::string rel = r.path.substr(8);
       if (r.method == "PUT") {
-        response = static_put(ctx->files_root, rel, r.body, true);   // POST has body
+        response = static_put(ctx->files_root, rel, r.body, true);   // PUT has body
       } else if (r.method == "POST") {
-        response = static_put(ctx->files_root, rel, r.body, false);  // PUT has body
+        response = static_put(ctx->files_root, rel, r.body, false);  // POST has body
       } else if (r.method == "DELETE") {
         response = static_delete(ctx->files_root, rel);
       } else {
@@ -134,6 +136,12 @@ run() is the main server loop. Main steps are:
 7. SIGINT — when Ctrl+C is pressed, break the accept loop and clean up
 */
 int HttpServer::run(const std::string& initial_response_path) {
+  // register SIGINT handler
+  struct sigaction sigact{};
+  sigact.sa_handler = SigintHandler;
+  sigact.sa_flags = SA_RESTART;
+  sigaction(SIGINT, &sigact, nullptr);
+
   std::ifstream file(initial_response_path);  
   if (!file.is_open()) {
     std::cerr << "Failed to open: " << initial_response_path << std::endl;
@@ -175,7 +183,7 @@ int HttpServer::run(const std::string& initial_response_path) {
   }
   // accept loop, derived from server_accept_rw_close.cpp
   // accepting a connection from a client and echo it
-  while (true) {
+  while (!g_done) {   // loop exits when Ctrl+C is pressed and SIGNIT set g_done = 1
     struct sockaddr_storage caddr;
     socklen_t caddr_len = sizeof(caddr);
     int client_fd = accept(listen_fd,
@@ -187,22 +195,18 @@ int HttpServer::run(const std::string& initial_response_path) {
         std::cerr << "Failure on accept: " << strerror(errno) << '\n';
         break;
     }
-    // print peer address in main
     // prints in run() right after accept() succeedsand before dispatching to the threadpool
     std::array<char, INET6_ADDRSTRLEN> astring{};
     struct sockaddr_in6* in6 = reinterpret_cast<struct sockaddr_in6*>(&caddr);
     inet_ntop(AF_INET6, &(in6->sin6_addr), astring.data(), INET6_ADDRSTRLEN);
-    std::cout << "client " << astring.data() << " port "
-              << ntohs(in6->sin6_port) << " connected.\n";
+    std::cout << "client " << astring.data() << " port "<< ntohs(in6->sin6_port) << " connected.\n";
     // dispatch to threadpool
     m_pool.dispatch({HandleClient, new ClientCtx{client_fd, home_page, m_files_root, &m_index}});
     // dispatch call packages HandleClient and a ClientCtx into a Task struct
     // the worker thread calls HandleClient(ctx), which casts ctx back to ClientCtx* and does the work
-    ClientCtx* ctx = new ClientCtx{client_fd, home_page, m_files_root, &m_index}; m_pool.dispatch({HandleClient, ctx});
   }
   close(listen_fd);
-  return EXIT_FAILURE;
-  
+  return EXIT_SUCCESS;
 }
 
 }  // namespace searchserver
