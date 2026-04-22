@@ -86,7 +86,7 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
   }
   if (r.path.starts_with("/static/")) {
     const std::string rel = r.path.substr(8);
-    return serve_static(ctx->files_root, rel);
+    return StaticGet(ctx->files_root, rel);
   }
   return MakeResponse(k_http_not_found, "<h1>404 Not Found</h1>", "text/html");
 }
@@ -95,13 +95,13 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
 auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
   const std::string rel = r.path.substr(8);
   if (r.method == "PUT") {
-    return static_put(ctx->files_root, rel, r.body, true);  // PUT has body
+    return StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
   }
   if (r.method == "POST") {
-    return static_put(ctx->files_root, rel, r.body, false);  // POST has body
+    return StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
   }
   if (r.method == "DELETE") {
-    return static_delete(ctx->files_root, rel);
+    return StaticDelete(ctx->files_root, rel);
   }
   return MakeResponse(k_http_not_implemented, "Not Implemented", "text/plain",
                       "Not Implemented");
@@ -239,6 +239,7 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
     close(listen_fd);
     return EXIT_FAILURE;
   }
+  std::cout << "accepting connections...\n";
   // accept loop, derived from server_accept_rw_close.cpp
   // accepting a connection from a client and echo it
   while (g_done == 0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
