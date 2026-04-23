@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <cctype>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -13,71 +12,30 @@
 #include <string>
 #include <vector>
 
-static std::string url_encode(const std::string& s) {
-  std::ostringstream out;
-  for (unsigned char c : s) {
-    if (std::isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~' ||
-        c == '/')
-      out << c;
-    else {
-      char buf[4];
-      std::snprintf(buf, sizeof(buf), "%%%02X", c);
-      out << buf;
-    }
-  }
-  return out.str();
-}
-
-static bool send_http_request(const std::string& host,
-                              uint16_t port,
-                              const std::string& method,
-                              const std::string& path,
-                              const std::string& body,
-                              std::string* out_resp) {
-  out_resp->clear();
-  // use getaddrinfo(AF_UNSPEC) so we support IPv4 and IPv6 addresses (e.g.
-  // '::')
-  struct addrinfo hints{}, *res = nullptr, *rp = nullptr;
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  std::string portstr = std::to_string(port);
-  int gai = getaddrinfo(host.c_str(), portstr.c_str(), &hints, &res);
-  if (gai != 0)
+static bool SendHttpRequest(const std::string& host,
+                            uint16_t port,
+                            const std::string& method,
+                            const std::string& path,
+                            const std::string& body,
+                            std::string* http_response) {
+  http_response->clear();
+  int sock = socket(AF_INET6, SOCK_STREAM, 0);
+  if (sock == -1)
     return false;
 
-  int sock = -1;
-  for (rp = res; rp != nullptr; rp = rp->ai_next) {
-    sock = ::socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if (sock < 0)
-      continue;
-    if (connect(sock, rp->ai_addr, rp->ai_addrlen) == 0)
-      break;  // success
+  struct sockaddr_in6 address{};
+  address.sin6_family = AF_INET6;
+  address.sin6_port = htons(port);
+  const std::string& connect_host = (host == "::") ? "::1" : host;
+  if (inet_pton(AF_INET6, connect_host.c_str(), &address.sin6_addr) != 1) {
     close(sock);
-    sock = -1;
+    return false;
   }
-  freeaddrinfo(res);
-  if (sock < 0) {
-    // try an IPv4 localhost fallback (handles cases where host is '::' but
-    // server is only listening on IPv4 loopback)
-    if (host != "127.0.0.1") {
-      struct addrinfo hints2{}, *res2 = nullptr, *rp2 = nullptr;
-      hints2.ai_family = AF_INET;
-      hints2.ai_socktype = SOCK_STREAM;
-      if (getaddrinfo("127.0.0.1", portstr.c_str(), &hints2, &res2) == 0) {
-        for (rp2 = res2; rp2 != nullptr; rp2 = rp2->ai_next) {
-          sock = ::socket(rp2->ai_family, rp2->ai_socktype, rp2->ai_protocol);
-          if (sock < 0)
-            continue;
-          if (connect(sock, rp2->ai_addr, rp2->ai_addrlen) == 0)
-            break;
-          close(sock);
-          sock = -1;
-        }
-        freeaddrinfo(res2);
-      }
-    }
-    if (sock < 0)
-      return false;
+
+  if (connect(sock, reinterpret_cast<struct sockaddr*>(&address),
+              sizeof(address)) != 0) {
+    close(sock);
+    return false;
   }
 
   std::ostringstream req;
@@ -109,12 +67,13 @@ static bool send_http_request(const std::string& host,
   char buf[4096];
   ssize_t n;
   while ((n = recv(sock, buf, sizeof(buf), 0)) > 0)
-    out_resp->append(buf, (size_t)n);
+    http_response->append(buf, (size_t)n);
   close(sock);
   return true;
 }
 
-static void print_help() {
+// Print commands that the user can type
+static void PrintHelp() {
   std::cout << "These requests modify the state of the underlying file system "
                "of the server\n";
   std::cout << "  get <server_path>                -- requests the resource "
@@ -130,8 +89,25 @@ static void print_help() {
   std::cout << "  quit | exit                      -- quit\n";
 }
 
-static bool parse_status(const std::string& resp, int* status_out) {
-  std::istringstream ss(resp);
+// Process server path from user input
+static std::string MakeServerPath(const std::string& server_path) {
+  if (server_path.empty())
+    return std::string();
+  // if the client provided a leading directory like "test_tree/...",
+  // strip that first path component since servers are given the
+  // files_root ("test_tree") and expect paths relative to it.
+  std::string res_server_path = server_path;
+  // strip a common prefix 'test_tree/' if present
+  const std::string prefix = "test_tree/";
+  if (res_server_path.rfind(prefix, 0) == 0)
+    res_server_path = res_server_path.substr(prefix.size());
+  if (res_server_path.front() != '/')
+    return std::string("/static/") + res_server_path;
+  return res_server_path;
+}
+
+static bool parse_status(const std::string& http_response, int* status_out) {
+  std::istringstream ss(http_response);
   std::string line;
   if (!std::getline(ss, line))
     return false;
@@ -153,69 +129,55 @@ int main(int argc, char** argv) {
   }
   std::string host = argv[1];
   uint16_t port = static_cast<uint16_t>(std::stoi(argv[2]));
-  print_help();
+  PrintHelp();
   std::string line;
-  auto make_server_path = [](const std::string& server_path) -> std::string {
-    if (server_path.empty())
-      return std::string();
-    // if the client provided a leading project directory like "test_tree/...",
-    // strip that first path component since servers typically are given the
-    // files_root (e.g. "test_tree") and expect paths relative to it.
-    std::string sp = server_path;
-    // strip a common prefix 'test_tree/' if present
-    const std::string prefix = "test_tree/";
-    if (sp.rfind(prefix, 0) == 0)
-      sp = sp.substr(prefix.size());
-    if (sp.front() != '/')
-      return std::string("/static/") + url_encode(sp);
-    return sp;
-  };
   while (true) {
-    std::cout << "> ";
+    std::cout << ">> ";
     if (!std::getline(std::cin, line))
       break;
     if (line.empty())
       continue;
-    std::istringstream iss(line);
-    std::string cmd;
-    iss >> cmd;
-    if (cmd == "quit" || cmd == "exit")
+    std::istringstream input_string(line);
+    std::string command;
+    input_string >> command;
+    if (command == "quit" || command == "exit")
       break;
-    if (cmd == "help") {
-      print_help();
+    if (command == "help") {
+      PrintHelp();
       continue;
     }
 
-    if (cmd == "get") {
+    if (command == "get") {
       std::string server_path, local_path;
-      iss >> server_path >> local_path;
+      input_string >> server_path >> local_path;
       if (server_path.empty()) {
         std::cout << "get requires <server_path>\n";
         continue;
       }
-      std::string path = make_server_path(server_path);
+      std::string path = MakeServerPath(server_path);
 
-      std::string resp;
-      if (!send_http_request(host, port, "GET", path, {}, &resp)) {
+      std::string http_response;
+      if (!SendHttpRequest(host, port, "GET", path, {}, &http_response)) {
         std::cout << "request failed\n";
         continue;
       }
-      size_t pos = resp.find("\r\n\r\n");
+      size_t pos = http_response.find("\r\n\r\n");
       size_t body_pos = std::string::npos;
       if (pos != std::string::npos)
         body_pos = pos + 4;
       else {
-        pos = resp.find("\n\n");
+        pos = http_response.find("\n\n");
         if (pos != std::string::npos)
           body_pos = pos + 2;
       }
-      std::string body =
-          (body_pos == std::string::npos) ? resp : resp.substr(body_pos);
+      std::string body = (body_pos == std::string::npos)
+                             ? http_response
+                             : http_response.substr(body_pos);
       int code = 0;
-      parse_status(resp, &code);
+      parse_status(http_response, &code);
       if (code >= 400) {
         // extract the HTTP reason phrase and print it plainly
-        std::istringstream status_line(resp);
+        std::istringstream status_line(http_response);
         std::string proto, code_str, reason;
         status_line >> proto >> code_str;
         std::getline(status_line, reason);
@@ -242,21 +204,21 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    if (cmd == "delete") {
+    if (command == "delete") {
       std::string server_path;
-      iss >> server_path;
+      input_string >> server_path;
       if (server_path.empty()) {
         std::cout << "delete requires <server_path>\n";
         continue;
       }
-      std::string path = make_server_path(server_path);
-      std::string resp;
-      if (!send_http_request(host, port, "DELETE", path, {}, &resp)) {
+      std::string path = MakeServerPath(server_path);
+      std::string http_response;
+      if (!SendHttpRequest(host, port, "DELETE", path, {}, &http_response)) {
         std::cout << "request failed\n";
         continue;
       }
       int code = 0;
-      if (!parse_status(resp, &code)) {
+      if (!parse_status(http_response, &code)) {
         std::cout << "failed to parse response\n";
         continue;
       }
@@ -270,9 +232,9 @@ int main(int argc, char** argv) {
       auto slash = server_path.find('/');
       if (slash != std::string::npos) {
         std::string alt = server_path.substr(slash + 1);
-        std::string alt_path = make_server_path(alt);
+        std::string alt_path = MakeServerPath(alt);
         std::string resp2;
-        if (send_http_request(host, port, "DELETE", alt_path, {}, &resp2)) {
+        if (SendHttpRequest(host, port, "DELETE", alt_path, {}, &resp2)) {
           int code2 = 0;
           if (parse_status(resp2, &code2) && code2 >= 200 && code2 < 300) {
             std::cout << "OK\n";
@@ -284,11 +246,11 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    if (cmd == "post" || cmd == "put") {
+    if (command == "post" || command == "put") {
       std::string server_path, local_path;
-      iss >> server_path >> local_path;
+      input_string >> server_path >> local_path;
       if (server_path.empty() || local_path.empty()) {
-        std::cout << cmd << " requires <server_path> <local_path>\n";
+        std::cout << command << " requires <server_path> <local_path>\n";
         continue;
       }
       std::ifstream in(local_path, std::ios::in | std::ios::binary);
@@ -298,19 +260,19 @@ int main(int argc, char** argv) {
       }
       std::string data((std::istreambuf_iterator<char>(in)),
                        std::istreambuf_iterator<char>());
-      std::string method = (cmd == "post") ? "POST" : "PUT";
-      std::string path = make_server_path(server_path);
-      std::string resp;
-      if (!send_http_request(host, port, method, path, data, &resp)) {
+      std::string method = (command == "post") ? "POST" : "PUT";
+      std::string path = MakeServerPath(server_path);
+      std::string http_response;
+      if (!SendHttpRequest(host, port, method, path, data, &http_response)) {
         std::cout << "request failed\n";
         continue;
       }
       int code = 0;
-      parse_status(resp, &code);
+      parse_status(http_response, &code);
       if (code >= 200 && code < 300) {
         std::cout << "OK\n";
       } else {
-        std::istringstream status_line(resp);
+        std::istringstream status_line(http_response);
         std::string proto, code_str, reason;
         status_line >> proto >> code_str;
         std::getline(status_line, reason);
@@ -325,7 +287,7 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    std::cout << "unknown command: " << cmd << " (type help)\n";
+    std::cout << "unknown command: " << command << " (type help)\n";
   }
   return 0;
 }
