@@ -194,9 +194,11 @@ socket
 */
 auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // register SIGINT handler
+
   struct sigaction sigact{};
   sigact.sa_handler = SigintHandler;
-  sigact.sa_flags = SA_RESTART;
+  // remove SA_RESTART flag to continue re-check g_dne
+  sigact.sa_flags = 0;
   sigaction(SIGINT, &sigact, nullptr);
 
   // read home page HTML once at startup — initial_response.txt is a full HTTP
