@@ -1,11 +1,12 @@
 #include "HttpServer.hpp"
 
-#include <climits> 
+#include <unistd.h>
+#include <array>
+#include <climits>
 #include <filesystem>  // read all the files the search server indexes
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unistd.h>
 
 using namespace searchserver;
 

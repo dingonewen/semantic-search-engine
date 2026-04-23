@@ -10,7 +10,7 @@ using namespace std::filesystem;
 // delimiter: any charactor that is not alphanumeric
 // input: "Hello, world!"
 // output: ["hello", "world"]
-static std::vector<std::string> Tokenize(const std::string& s) {
+std::vector<std::string> InvertedIndex::Tokenize(const std::string& s) {
   std::vector<std::string> res;
   std::string curr;
   // scan the input string char by char

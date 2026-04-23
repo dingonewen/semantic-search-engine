@@ -11,16 +11,16 @@ CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cp
 HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp InvertedIndex.hpp
 
 
-all: test_suite searchserver searchclient
+all: test_suite SearchServer searchclient
 
-# build a minimal searchserver binary for the assignment demo
-SRV_OBJS = searchserver.o HttpServer.o HttpRequest.o HttpResponse.o StaticFile.o InvertedIndex.o ThreadPool.o
+# build a minimal SearchServer binary for the assignment demo
+SRV_OBJS = SearchServer.o HttpServer.o HttpRequest.o HttpResponse.o StaticFile.o InvertedIndex.o ThreadPool.o
 
-searchserver: $(SRV_OBJS)
-	$(CXX) $(CXXFLAGS) -o searchserver $(SRV_OBJS)
+SearchServer: $(SRV_OBJS)
+	$(CXX) $(CXXFLAGS) -o SearchServer $(SRV_OBJS)
 
-searchserver.o: searchserver.cpp HttpServer.hpp
-	$(CXX) $(CXXFLAGS) -c searchserver.cpp
+SearchServer.o: SearchServer.cpp HttpServer.hpp
+	$(CXX) $(CXXFLAGS) -c SearchServer.cpp
 
 HttpServer.o: HttpServer.cpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp StaticFile.hpp InvertedIndex.hpp ThreadPool.hpp
 	$(CXX) $(CXXFLAGS) -c HttpServer.cpp
@@ -71,7 +71,7 @@ ThreadPool.o: ThreadPool.cpp ThreadPool.hpp
 	$(CXX) $(CXXFLAGS) -c $<
 
 clean:
-	rm -f *.o *~ test_suite searchserver searchclient
+	rm -f *.o *~ test_suite SearchServer searchclient
 
 tidy-check: 
 	clang-tidy-19 \
