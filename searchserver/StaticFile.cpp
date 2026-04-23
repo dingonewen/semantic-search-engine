@@ -39,7 +39,7 @@ std::string StaticGet(const std::string& files_root,
     return MakeResponse(200, ReadAll(path), ContentTypeFor(path));
   }
   // not found
-  return MakeResponse(404, "<h1>404 Not Found</h1>", "test/html");
+  return MakeResponse(404, "<h1>404 Not Found</h1>", "text/html");
 }
 
 // Returns a 403 response string if target is outside files_root, else return ""
