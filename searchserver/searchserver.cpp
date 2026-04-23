@@ -1,12 +1,11 @@
 #include "HttpServer.hpp"
 
 #include <array>
-#include <climits> // PATH_MAX - the maximum length of a file path 
+#include <climits>     // PATH_MAX - the maximum length of a file path
 #include <filesystem>  // read all the files the search server indexes
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unistd.h>
 
 using namespace searchserver;
 
@@ -37,7 +36,8 @@ auto FindInitialResponse(int argc, char** argv) -> std::string {
   }
   std::array<char, PATH_MAX> exepath{};
   const ssize_t len =
-      // readlink is a Linux system call that reads the target of a symbolic link
+      // readlink is a Linux system call that reads the target of a symbolic
+      // link
       readlink("/proc/self/exe", exepath.data(), exepath.size() - 1);
   if (len > 0) {
     const std::string full(exepath.data(), static_cast<size_t>(len));
