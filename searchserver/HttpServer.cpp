@@ -81,6 +81,7 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
       links += "<li><a href=\"/static/" + p.first + "\">" + p.first +
                "</a> [" + std::to_string(p.second) + "]</li>\n";
     }
+    body += "<p>" + std::to_string(results.size()) + " results found</p>\n";
     body += "<ul>\n" + links + "</ul>\n";
     return MakeResponse(k_http_ok, body, "text/html");
   }
@@ -208,6 +209,13 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
   while (std::getline(file, line)) {
     home_page += line + '\n';
   }  // load homepage done
+  // initial_response.txt is a full HTTP response (headers + HTML body).
+  // Strip the headers so home_page contains only the HTML, which MakeResponse
+  // will then wrap in a fresh HTTP response.
+  const auto sep = home_page.find("\n\n");
+  if (sep != std::string::npos) {
+    home_page = home_page.substr(sep + 2);
+  }
 
   // parsing the port is main()'s job
   const int listen_fd = socket(AF_INET6, SOCK_STREAM, 0);

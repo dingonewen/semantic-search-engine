@@ -1,6 +1,6 @@
 #include "HttpServer.hpp"
 
-#include <climits> 
+#include <climits> // PATH_MAX - the maximum length of a file path 
 #include <filesystem>  // read all the files the search server indexes
 #include <fstream>
 #include <iostream>
@@ -13,6 +13,8 @@ namespace {
 // functions in this cpp are not unit testable, so no test cases
 // FileExistsReadable and FindInitialResponse are in the namespace
 // which gives them internal linkage like static
+// these two functions are for finding initial_response.txt when you
+// run the server from a different directory than where sample_http/ lives.
 
 // checks if a file exists and can be opened for reading
 auto FileExistsReadable(const std::string& p) -> bool {
@@ -34,6 +36,7 @@ auto FindInitialResponse(int argc, char** argv) -> std::string {
   }
   std::array<char, PATH_MAX> exepath{};
   const ssize_t len =
+      // readlink is a Linux system call that reads the target of a symbolic link
       readlink("/proc/self/exe", exepath.data(), exepath.size() - 1);
   if (len > 0) {
     const std::string full(exepath.data(), static_cast<size_t>(len));
@@ -83,7 +86,6 @@ int main(int argc, char** argv) {
     std::cerr << "Error: " << files_root << " is not a valid directory\n";
     return EXIT_FAILURE;
   }
-
   const std::string initial = FindInitialResponse(argc, argv);
   HttpServer srv(port, files_root, 8);
   return srv.Run(initial);
