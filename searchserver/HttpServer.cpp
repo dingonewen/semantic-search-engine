@@ -194,24 +194,25 @@ socket
 */
 auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // register SIGINT handler
+
   struct sigaction sigact{};
   sigact.sa_handler = SigintHandler;
-  sigact.sa_flags = SA_RESTART;
+  // remove SA_RESTART flag to continue re-check g_dne
+  sigact.sa_flags = 0;
   sigaction(SIGINT, &sigact, nullptr);
 
+  // read home page HTML once at startup — initial_response.txt is a full HTTP
+  // response, so strip the headers and keep only the HTML body after \n\n
   std::ifstream file(initial_response_path);
   if (!file.is_open()) {
     std::cerr << "Failed to open: " << initial_response_path << '\n';
-    return EXIT_FAILURE;  // exit code on fatal error
+    return EXIT_FAILURE;
   }
   std::string home_page;
   std::string line;
   while (std::getline(file, line)) {
     home_page += line + '\n';
-  }  // load homepage done
-  // initial_response.txt is a full HTTP response (headers + HTML body).
-  // Strip the headers so home_page contains only the HTML, which MakeResponse
-  // will then wrap in a fresh HTTP response.
+  }
   const auto sep = home_page.find("\n\n");
   if (sep != std::string::npos) {
     home_page = home_page.substr(sep + 2);
