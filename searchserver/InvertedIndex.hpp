@@ -26,6 +26,9 @@ class InvertedIndex {
   std::vector<std::pair<std::string, int>> SearchAndRank(
       const std::vector<std::string>& terms) const;
 
+  // Splits text into lowercase alphanumeric tokens.
+  static std::vector<std::string> Tokenize(const std::string& text);
+
  private:
   // m_count[word][filepath] = count of 'word' in 'filepath'
   std::unordered_map<std::string, std::unordered_map<std::string, int>> m_count;

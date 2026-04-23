@@ -31,10 +31,10 @@ static int find_rank(const std::vector<std::pair<std::string, int>>& results,
   return -1;
 }
 
-// ─── tokenize ────────────────────────────────────────────────────────────────
+// ─── Tokenize ────────────────────────────────────────────────────────────────
 
-TEST_CASE("tokenize splits on non-alphanumeric characters", "[invertedindex]") {
-  auto toks = InvertedIndex::tokenize("hello, world! foo-bar");
+TEST_CASE("Tokenize splits on non-alphanumeric characters", "[invertedindex]") {
+  auto toks = InvertedIndex::Tokenize("hello, world! foo-bar");
   REQUIRE(toks.size() == 4);
   REQUIRE(toks[0] == "hello");
   REQUIRE(toks[1] == "world");
@@ -42,30 +42,30 @@ TEST_CASE("tokenize splits on non-alphanumeric characters", "[invertedindex]") {
   REQUIRE(toks[3] == "bar");
 }
 
-TEST_CASE("tokenize lowercases all tokens", "[invertedindex]") {
-  auto toks = InvertedIndex::tokenize("Buffalo BUFFALO buffalo");
+TEST_CASE("Tokenize lowercases all tokens", "[invertedindex]") {
+  auto toks = InvertedIndex::Tokenize("Buffalo BUFFALO buffalo");
   REQUIRE(toks.size() == 3);
   for (auto& t : toks)
     REQUIRE(t == "buffalo");
 }
 
-TEST_CASE("tokenize returns empty vector for empty string", "[invertedindex]") {
-  REQUIRE(InvertedIndex::tokenize("").empty());
+TEST_CASE("Tokenize returns empty vector for empty string", "[invertedindex]") {
+  REQUIRE(InvertedIndex::Tokenize("").empty());
 }
 
-TEST_CASE("tokenize returns empty vector for all punctuation",
+TEST_CASE("Tokenize returns empty vector for all punctuation",
           "[invertedindex]") {
-  REQUIRE(InvertedIndex::tokenize("!!! --- ...").empty());
+  REQUIRE(InvertedIndex::Tokenize("!!! --- ...").empty());
 }
 
-// ─── build + search_and_rank ─────────────────────────────────────────────────
+// ─── Build + SearchAndRank ─────────────────────────────────────────────────
 
 TEST_CASE("search 'buffalo' matches expected files and scores",
           "[invertedindex]") {
   InvertedIndex idx;
-  idx.build("test_tree");
+  idx.Build("test_tree");
 
-  auto results = idx.search_and_rank({"buffalo"});
+  auto results = idx.SearchAndRank({"buffalo"});
 
   // Shows 9 results
   REQUIRE(results.size() == 9);
@@ -96,22 +96,22 @@ TEST_CASE("search 'buffalo' matches expected files and scores",
 
 TEST_CASE("search 'Buffalo' (mixed case) gives same results as 'buffalo'",
           "[invertedindex]") {
-  // split_terms() lowercases the query before passing to search_and_rank.
+  // split_terms() lowercases the query before passing to SearchAndRank.
   // Verify that split_terms lowercases "Buffalo" -> "buffalo" so the caller
   // gets the same results regardless of input case.
-  auto lower_terms = InvertedIndex::tokenize("buffalo");
-  auto upper_terms = InvertedIndex::tokenize("Buffalo");
+  auto lower_terms = InvertedIndex::Tokenize("buffalo");
+  auto upper_terms = InvertedIndex::Tokenize("Buffalo");
 
-  // tokenize must lowercase both to the same token
+  // Tokenize must lowercase both to the same token
   REQUIRE(lower_terms == upper_terms);
   REQUIRE(lower_terms.size() == 1);
   REQUIRE(lower_terms[0] == "buffalo");
 
   // Searching with the lowercased terms must give the same results
   InvertedIndex idx;
-  idx.build("test_tree");
-  auto lower = idx.search_and_rank(lower_terms);
-  auto upper = idx.search_and_rank(upper_terms);
+  idx.Build("test_tree");
+  auto lower = idx.SearchAndRank(lower_terms);
+  auto upper = idx.SearchAndRank(upper_terms);
   REQUIRE(lower.size() == upper.size());
   for (size_t i = 0; i < lower.size(); ++i) {
     REQUIRE(lower[i].first == upper[i].first);
@@ -122,10 +122,10 @@ TEST_CASE("search 'Buffalo' (mixed case) gives same results as 'buffalo'",
 TEST_CASE("search 'hat magic' returns same results as 'magic hat'",
           "[invertedindex]") {
   InvertedIndex idx;
-  idx.build("test_tree");
+  idx.Build("test_tree");
 
-  auto hat_magic = idx.search_and_rank({"hat", "magic"});
-  auto magic_hat = idx.search_and_rank({"magic", "hat"});
+  auto hat_magic = idx.SearchAndRank({"hat", "magic"});
+  auto magic_hat = idx.SearchAndRank({"magic", "hat"});
 
   // Same number of results regardless of term order
   REQUIRE(hat_magic.size() == magic_hat.size());
@@ -149,9 +149,9 @@ TEST_CASE("search 'hat magic' returns same results as 'magic hat'",
 TEST_CASE("search 'hat magic' matches expected files and scores",
           "[invertedindex]") {
   InvertedIndex idx;
-  idx.build("test_tree");
+  idx.Build("test_tree");
 
-  auto results = idx.search_and_rank({"hat", "magic"});
+  auto results = idx.SearchAndRank({"hat", "magic"});
 
   // Results must be sorted in descending order of score
   for (size_t i = 1; i < results.size(); ++i)
@@ -170,47 +170,46 @@ TEST_CASE("search 'hat magic' matches expected files and scores",
   REQUIRE(find_score(results, "books/artofwar.txt") == 2);
 }
 
-// ─── add_file / remove_file ──────────────────────────────────────────────────
+// ─── AddFile / RemoveFile ──────────────────────────────────────────────────
 
-TEST_CASE("remove_file removes a file's entries from the index",
+TEST_CASE("RemoveFile removes a file's entries from the index",
           "[invertedindex]") {
   InvertedIndex idx;
-  idx.build("test_tree");
+  idx.Build("test_tree");
 
   // Before removal, buffalo.txt should appear in buffalo search
-  auto before = idx.search_and_rank({"buffalo"});
+  auto before = idx.SearchAndRank({"buffalo"});
   REQUIRE(find_score(before, "tiny/buffalo.txt") > 0);
 
   // Remove it
-  idx.remove_file("test_tree/tiny/buffalo.txt");
+  idx.RemoveFile("test_tree/tiny/buffalo.txt");
 
-  auto after = idx.search_and_rank({"buffalo"});
+  auto after = idx.SearchAndRank({"buffalo"});
   REQUIRE(find_score(after, "tiny/buffalo.txt") == -1);
   // One fewer result
   REQUIRE(after.size() == before.size() - 1);
 }
 
-TEST_CASE("add_file re-indexes a previously removed file", "[invertedindex]") {
+TEST_CASE("AddFile re-indexes a previously removed file", "[invertedindex]") {
   InvertedIndex idx;
-  idx.build("test_tree");
+  idx.Build("test_tree");
 
   int original_score =
-      find_score(idx.search_and_rank({"buffalo"}), "tiny/buffalo.txt");
+      find_score(idx.SearchAndRank({"buffalo"}), "tiny/buffalo.txt");
   REQUIRE(original_score > 0);
 
-  idx.remove_file("test_tree/tiny/buffalo.txt");
-  REQUIRE(find_score(idx.search_and_rank({"buffalo"}), "tiny/buffalo.txt") ==
-          -1);
+  idx.RemoveFile("test_tree/tiny/buffalo.txt");
+  REQUIRE(find_score(idx.SearchAndRank({"buffalo"}), "tiny/buffalo.txt") == -1);
 
-  idx.add_file("test_tree/tiny/buffalo.txt");
+  idx.AddFile("test_tree/tiny/buffalo.txt");
   int restored_score =
-      find_score(idx.search_and_rank({"buffalo"}), "tiny/buffalo.txt");
+      find_score(idx.SearchAndRank({"buffalo"}), "tiny/buffalo.txt");
   REQUIRE(restored_score == original_score);
 }
 
 TEST_CASE("search for unknown term returns empty results", "[invertedindex]") {
   InvertedIndex idx;
-  idx.build("test_tree");
-  auto results = idx.search_and_rank({"zzzznotaword99999"});
+  idx.Build("test_tree");
+  auto results = idx.SearchAndRank({"zzzznotaword99999"});
   REQUIRE(results.empty());
 }

@@ -1,5 +1,6 @@
 #include "HttpServer.hpp"
 
+#include <array>
 #include <climits> // PATH_MAX - the maximum length of a file path 
 #include <filesystem>  // read all the files the search server indexes
 #include <fstream>
