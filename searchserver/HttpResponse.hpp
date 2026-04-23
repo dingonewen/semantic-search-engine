@@ -4,6 +4,7 @@
 #include <string>
 
 // HTTP status code constants
+// use these for tidy-check purposes
 static constexpr int k_http_ok = 200;
 static constexpr int k_http_created = 201;
 static constexpr int k_http_forbidden = 403;
@@ -12,6 +13,8 @@ static constexpr int k_http_conflict = 409;
 static constexpr int k_http_not_implemented = 501;
 
 // Build a complete HTTP/1.1 response string ready to send over a socket.
+// unlike request, all responses have a body
+// return auto is for tidy-check's readability-identifier-naming rules
 auto MakeResponse(int status,
                   const std::string& body,
                   const std::string& content_type = "text/plain",
