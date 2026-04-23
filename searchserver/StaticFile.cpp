@@ -32,16 +32,6 @@ static std::string ContentTypeFor(const std::string& p) {
   return "application/octet-stream";
 }
 
-std::string StaticGet(const std::string& files_root,
-                      const std::string& relpath) {
-  std::string path = files_root + "/" + relpath;
-  if (std::filesystem::is_regular_file(path)) {
-    return MakeResponse(200, ReadAll(path), ContentTypeFor(path));
-  }
-  // not found
-  return MakeResponse(404, "<h1>404 Not Found</h1>", "text/html");
-}
-
 // Returns a 403 response string if target is outside files_root, else return ""
 static std::string CheckWithinRoot(const std::string& files_root,
                                    const std::filesystem::path& target) {
@@ -65,6 +55,21 @@ static std::string CheckWithinRoot(const std::string& files_root,
   return "";
 }
 
+std::string StaticGet(const std::string& files_root,
+                      const std::string& relpath) {
+  // Check path traversal BEFORE existence check
+  std::string error1 = CheckWithinRoot(files_root, relpath);
+  if (!error1.empty()) {
+    return error1;
+  }
+
+  if (std::filesystem::is_regular_file(relpath)) {
+    return MakeResponse(200, ReadAll(relpath), ContentTypeFor(relpath));
+  }
+  // not found
+  return MakeResponse(404, "<h1>404 Not Found</h1>", "text/html");
+}
+
 // Writes data to target. Returns a 500 response on failure, else ""
 static std::string WriteFile(const std::filesystem::path& target,
                              const std::string& data) {
@@ -83,27 +88,26 @@ std::string StaticPut(const std::string& files_root,
                       const std::string& data,
                       bool overwrite) {
   try {
-    auto target = std::filesystem::path(files_root) / relpath;
     // Check if the client request to access any files outside of the
     // root directory
-    std::string error1 = CheckWithinRoot(files_root, target);
+    std::string error1 = CheckWithinRoot(files_root, relpath);
     if (!error1.empty()) {
       return error1;
     }
     // POST: check if the file already exists. Return 409 Conflict on POST
     // existing file
-    auto exist = std::filesystem::exists(target);
+    auto exist = std::filesystem::exists(relpath);
     if (exist && !overwrite) {
       return MakeResponse(409, "<h1>409 Conflict</h1>", "text/html",
                           "Conflict");
     }
     // Check if the directory containing the target file actually exists
-    auto parent = target.parent_path();
-    if (!parent.empty() && !std::filesystem::is_directory(parent)) {
-      return MakeResponse(400, "<h1>400 Bad Request</h1>", "text/html",
-                          "Invalid Request");
-    }
-    std::string error2 = WriteFile(target, data);
+    // auto parent = target.parent_path();
+    // if (!parent.empty() && !std::filesystem::is_directory(parent)) {
+    //   return MakeResponse(400, "<h1>400 Bad Request</h1>", "text/html",
+    //                       "Invalid Request");
+    // }
+    std::string error2 = WriteFile(relpath, data);
     if (!error2.empty()) {
       return error2;
     }
@@ -120,23 +124,21 @@ std::string StaticPut(const std::string& files_root,
 std::string StaticDelete(const std::string& files_root,
                          const std::string& relpath) {
   try {
-    auto target = std::filesystem::path(files_root) / relpath;
-
     // Check path traversal BEFORE existence check
-    std::string error1 = CheckWithinRoot(files_root, target);
+    std::string error1 = CheckWithinRoot(files_root, relpath);
     if (!error1.empty()) {
       return error1;
     }
 
-    if (!std::filesystem::exists(target) ||
-        !std::filesystem::is_regular_file(target)) {
+    if (!std::filesystem::exists(relpath) ||
+        !std::filesystem::is_regular_file(relpath)) {
       return MakeResponse(404, "<h1>404 Not Found</h1>", "text/html",
                           "Not Found");
     }
 
     // Delete the file
     std::error_code ec;
-    bool success = std::filesystem::remove(target, ec);
+    bool success = std::filesystem::remove(relpath, ec);
     if (!success || ec) {
       return MakeResponse(500, "<h1>500 Internal Server Error</h1>",
                           "text/html", "Internal Server Error");
