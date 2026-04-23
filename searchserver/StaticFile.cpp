@@ -122,17 +122,16 @@ std::string StaticDelete(const std::string& files_root,
   try {
     auto target = std::filesystem::path(files_root) / relpath;
 
+    // Check path traversal BEFORE existence check
+    std::string error1 = CheckWithinRoot(files_root, target);
+    if (!error1.empty()) {
+      return error1;
+    }
+
     if (!std::filesystem::exists(target) ||
         !std::filesystem::is_regular_file(target)) {
       return MakeResponse(404, "<h1>404 Not Found</h1>", "text/html",
                           "Not Found");
-    }
-
-    // Check if the client request to delete any files outside of the
-    // root directory
-    std::string error1 = CheckWithinRoot(files_root, target);
-    if (!error1.empty()) {
-      return error1;
     }
 
     // Delete the file
