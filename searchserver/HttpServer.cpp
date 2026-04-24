@@ -6,7 +6,9 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <csignal>
 #include <cstdlib>
@@ -14,10 +16,12 @@
 
 #include <array>
 #include <cerrno>
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <utility>
 
 namespace {
 volatile sig_atomic_t g_done = 0;  // set to 1 on SIGINT
@@ -60,7 +64,7 @@ auto ReadRawRequest(int fd) -> std::string {
   std::string raw;
   std::array<char, 4096> buf{};
   while (true) {
-    ssize_t n = read(fd, buf.data(), buf.size() - 1);
+    const ssize_t n = read(fd, buf.data(), buf.size() - 1);
     if (n < 0) {
       if ((errno == EAGAIN) || (errno == EINTR)) {
         continue;
@@ -121,7 +125,7 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
 
 // send response (loop to handle short writes)
 void SendAll(int fd, const std::string& response) {
-  ssize_t to_send = static_cast<ssize_t>(response.size());
+  auto to_send = static_cast<ssize_t>(response.size());
   const char* ptr = response.data();
   while (to_send > 0) {
     const ssize_t w = write(fd, ptr, static_cast<size_t>(to_send));
@@ -289,6 +293,7 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
     // dispatch call packages HandleClient and a ClientCtx into a Task struct
     // the worker thread calls HandleClient(ctx), which casts ctx back to
     // ClientCtx* and does the work
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     auto* ctx = new ClientCtx{.client_fd = client_fd,
                               .home_page = home_page,
                               .files_root = m_files_root,
