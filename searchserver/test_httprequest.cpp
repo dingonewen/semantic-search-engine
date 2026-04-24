@@ -39,3 +39,21 @@ TEST_CASE("SplitTerms percent20 and uppercase", "[HttpRequest]") {
     REQUIRE(terms[0] == "hello");
     REQUIRE(terms[1] == "world");
 }
+
+TEST_CASE("SplitTerms empty query returns empty vector", "[HttpRequest]") {
+    auto terms = SplitTerms("");
+    REQUIRE(terms.empty());
+}
+
+TEST_CASE("ParseRequest POST with body and Content-Length", "[HttpRequest]") {
+    std::string raw =
+        "POST /static/foo.txt HTTP/1.1\r\n"
+        "Host: localhost:5950\r\n"
+        "Content-Length: 5\r\n"
+        "\r\n"
+        "hello";
+    Request req = ParseRequest(raw);
+    REQUIRE(req.method == "POST");
+    REQUIRE(req.path == "/static/foo.txt");
+    REQUIRE(req.body == "hello");
+}

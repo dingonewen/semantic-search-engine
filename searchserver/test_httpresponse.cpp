@@ -15,3 +15,10 @@ TEST_CASE("MakeResponse 404 custom status_text", "[HttpResponse]") {
     REQUIRE(resp.find("Content-Type: text/html") != std::string::npos);
     REQUIRE(resp.find("Content-Length: 9") != std::string::npos);
 }
+
+TEST_CASE("MakeResponse default status text for known codes", "[HttpResponse]") {
+    REQUIRE(MakeResponse(200, "").find("HTTP/1.1 200 OK") != std::string::npos);
+    REQUIRE(MakeResponse(201, "").find("HTTP/1.1 201 Created") != std::string::npos);
+    REQUIRE(MakeResponse(403, "").find("HTTP/1.1 403 Forbidden") != std::string::npos);
+    REQUIRE(MakeResponse(404, "").find("HTTP/1.1 404 Not Found") != std::string::npos);
+}

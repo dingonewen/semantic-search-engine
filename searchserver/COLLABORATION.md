@@ -34,7 +34,7 @@ searchserver/
 | `HttpRequest.cpp/hpp` ✅| Parses raw HTTP into `Request` struct; `split_terms()` |
 | `HttpResponse.cpp/hpp` ✅| Builds HTTP response strings via `make_response()` |
 | `ThreadPool.cpp/hpp` ✅| Worker threads, task queue, mutex/CV synchronization |
-| `searchserver.cpp` | `main()` — wires everything together, parses CLI args |
+| `searchserver.cpp` ✅| `main()` — wires everything together, parses CLI args |
 | `test_threadpool.cpp` ✅| Tests for ThreadPool |
 
 **Yiwen's responsibilities:**
