@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <csignal>
@@ -15,6 +16,7 @@
 #include <cstring>
 
 #include <array>
+#include <cctype>
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
@@ -63,10 +65,13 @@ HandleStaticMutation, and SendAll for tidy-check
 auto ReadRawRequest(int fd) -> std::string {
   std::string raw;
   std::array<char, 4096> buf{};
-  while (true) {
+  while (raw.find("\r\n\r\n") == std::string::npos) {
     const ssize_t n = read(fd, buf.data(), buf.size() - 1);
     if (n < 0) {
       if ((errno == EAGAIN) || (errno == EINTR)) {
+        if (g_done != 0) {
+          break;  // server shutting down, stop waiting for data
+        }
         continue;
       }
       break;
@@ -75,9 +80,46 @@ auto ReadRawRequest(int fd) -> std::string {
       break;  // client disconnected
     }
     raw.append(buf.data(), static_cast<size_t>(n));
-    if (raw.find("\r\n\r\n") != std::string::npos) {
+  }
+  // read body if Content-Length header is present (needed for PUT/POST)
+  const size_t hdr_end = raw.find("\r\n\r\n");
+  if (hdr_end == std::string::npos) {
+    return raw;
+  }
+  const size_t body_offset = hdr_end + 4;
+  // case-insensitive search for Content-Length in headers only
+  size_t content_length = 0;
+  {
+    std::string lower_hdr = raw.substr(0, body_offset);
+    for (char& c : lower_hdr) {
+      c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    const size_t cl_pos = lower_hdr.find("content-length:");
+    if (cl_pos != std::string::npos) {
+      try {
+        content_length = std::stoul(raw.substr(cl_pos + 15));
+      } catch (...) {}
+    }
+  }
+  // read any remaining body bytes not yet buffered
+  size_t body_read = raw.size() - body_offset;
+  while (body_read < content_length) {
+    const size_t to_read = std::min(content_length - body_read, buf.size() - 1);
+    const ssize_t n = read(fd, buf.data(), to_read);
+    if (n < 0) {
+      if ((errno == EAGAIN) || (errno == EINTR)) {
+        if (g_done != 0) {
+          break;
+        }
+        continue;
+      }
       break;
     }
+    if (n == 0) {
+      break;
+    }
+    raw.append(buf.data(), static_cast<size_t>(n));
+    body_read += static_cast<size_t>(n);
   }
   return raw;
 }
@@ -111,13 +153,25 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
 auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
   const std::string rel = r.path.substr(8);
   if (r.method == "PUT") {
-    return StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
+    const auto resp = StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
+    if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      ctx->index->AddFile(rel);  // update search index on success
+    }
+    return resp;
   }
   if (r.method == "POST") {
-    return StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
+    const auto resp = StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
+    if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      ctx->index->AddFile(rel);  // update search index on success
+    }
+    return resp;
   }
   if (r.method == "DELETE") {
-    return StaticDelete(ctx->files_root, rel);
+    const auto resp = StaticDelete(ctx->files_root, rel);
+    if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      ctx->index->RemoveFile(rel);  // update search index on success
+    }
+    return resp;
   }
   return MakeResponse(k_http_not_implemented, "Not Implemented", "text/plain",
                       "Not Implemented");
@@ -150,6 +204,10 @@ void SendAll(int fd, const std::string& response) {
 // loop back and read next request
 void HandleClient(void* arg) {
   auto* ctx = static_cast<ClientCtx*>(arg);
+  // 1-second read timeout: lets the thread wake up and check g_done on Ctrl+C
+  // instead of blocking in read() forever on a keep-alive connection
+  struct timeval tv{1, 0};
+  setsockopt(ctx->client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   // keep-alive loop: each iteration handles one full request-response cycle
   // browser may send multiple requests on same connection before closing
   while (true) {
