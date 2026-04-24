@@ -4,32 +4,47 @@
 #include "./InvertedIndex.hpp"
 #include "./StaticFile.hpp"  // serve_static, static_put, static_delete
 
-#include <arpa/inet.h>  
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 #include <array>
 #include <cerrno>
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <utility>
 
 namespace {
-volatile sig_atomic_t g_done = 0;  // SIGINT handling
+volatile sig_atomic_t g_done = 0;  // set to 1 on SIGINT
+volatile sig_atomic_t g_listen_fd =
+    -1;  // set before accept loop so handler can close it
+
 void SigintHandler(int /*signo*/) {
   g_done = 1;
-}  // parameter is unused, omitted to pass tidy-check
+  // closing listen_fd forces accept() to return immediately with an error,
+  // which lets the accept loop re-check g_done and exit cleanly
+  const int fd = g_listen_fd;
+  if (fd >= 0) {
+    g_listen_fd = -1;
+    close(fd);
+  }
+}
 }  // namespace
 
 namespace searchserver {
 
 // Internal helpers below are in an anonymous namespace (not unit-testable
-// directly). They are covered through integration testing via HttpServer::Run().
+// directly). They are covered through integration testing via
+// HttpServer::Run().
 namespace {
 
 // bundles everything the worker thread needs to handle one client connection
@@ -41,7 +56,7 @@ struct ClientCtx {
 };
 
 /*
-HandleClient's inner logic was split into ReadRawRequest, HandleGetRequest, 
+HandleClient's inner logic was split into ReadRawRequest, HandleGetRequest,
 HandleStaticMutation, and SendAll for tidy-check
 */
 // read until \r\n\r\n (end of headers), chunk by chunk
@@ -49,7 +64,7 @@ auto ReadRawRequest(int fd) -> std::string {
   std::string raw;
   std::array<char, 4096> buf{};
   while (true) {
-    ssize_t n = read(fd, buf.data(), buf.size() - 1);
+    const ssize_t n = read(fd, buf.data(), buf.size() - 1);
     if (n < 0) {
       if ((errno == EAGAIN) || (errno == EINTR)) {
         continue;
@@ -78,8 +93,8 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
     std::string body = ctx->home_page;
     std::string links;
     for (const auto& p : results) {
-      links += "<li><a href=\"/static/" + p.first + "\">" + p.first +
-               "</a> [" + std::to_string(p.second) + "]</li>\n";
+      links += "<li><a href=\"/static/" + p.first + "\">" + p.first + "</a> [" +
+               std::to_string(p.second) + "]</li>\n";
     }
     body += "<p>" + std::to_string(results.size()) + " results found</p>\n";
     body += "<ul>\n" + links + "</ul>\n";
@@ -110,7 +125,7 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
 
 // send response (loop to handle short writes)
 void SendAll(int fd, const std::string& response) {
-  ssize_t to_send = static_cast<ssize_t>(response.size());
+  auto to_send = static_cast<ssize_t>(response.size());
   const char* ptr = response.data();
   while (to_send > 0) {
     const ssize_t w = write(fd, ptr, static_cast<size_t>(to_send));
@@ -248,15 +263,19 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
     close(listen_fd);
     return EXIT_FAILURE;
   }
+  g_listen_fd = listen_fd;  // expose to signal handler so it can close it
   std::cout << "accepting connections...\n";
   // accept loop, derived from server_accept_rw_close.cpp
   // accepting a connection from a client and echo it
-  while (g_done == 0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
+  while (g_done ==
+         0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
     struct sockaddr_storage caddr{};
     socklen_t caddr_len = sizeof(caddr);
     const int client_fd = accept(
         listen_fd, reinterpret_cast<struct sockaddr*>(&caddr), &caddr_len);
     if (client_fd < 0) {
+      if (g_done != 0)
+        break;  // SIGINT closed listen_fd, exit cleanly
       if ((errno == EINTR) || (errno == EAGAIN) || (errno == EWOULDBLOCK)) {
         continue;
       }
@@ -274,13 +293,17 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
     // dispatch call packages HandleClient and a ClientCtx into a Task struct
     // the worker thread calls HandleClient(ctx), which casts ctx back to
     // ClientCtx* and does the work
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     auto* ctx = new ClientCtx{.client_fd = client_fd,
-                               .home_page = home_page,
-                               .files_root = m_files_root,
-                               .index = &m_index};
+                              .home_page = home_page,
+                              .files_root = m_files_root,
+                              .index = &m_index};
     m_pool.Dispatch({.func = HandleClient, .arg = ctx});
   }
-  close(listen_fd);
+  // only close if signal handler hasn't already closed it
+  if (g_listen_fd >= 0) {
+    close(listen_fd);
+  }
   return EXIT_SUCCESS;
 }
 

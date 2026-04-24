@@ -11,7 +11,8 @@
 namespace searchserver {
 
 // A ThreadPool maintains a pool of worker threads that process Tasks from a
-// queue. Customers dispatch Tasks; a free thread picks up each task and runs it.
+// queue. Customers dispatch Tasks; a free thread picks up each task and runs
+// it.
 class ThreadPool {
  public:
   explicit ThreadPool(size_t num_threads);

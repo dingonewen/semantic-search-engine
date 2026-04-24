@@ -3,10 +3,9 @@
 #include <string>
 
 /*
-Given a status code, body, content type, and optional status text, it assembles the response in the correct format:
-HTTP/1.1 200 OK\r\n
-Content-Type: text/html\r\n
-Content-Length: 42\r\n
+Given a status code, body, content type, and optional status text, it assembles
+the response in the correct format: HTTP/1.1 200 OK\r\n Content-Type:
+text/html\r\n Content-Length: 42\r\n
 \r\n
 <the body here>
 */
