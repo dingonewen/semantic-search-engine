@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -20,20 +21,32 @@ static bool SendHttpRequest(const std::string& host,
                             std::string* http_response) {
   http_response->clear();
   int sock = socket(AF_INET6, SOCK_STREAM, 0);
-  if (sock == -1)
+  if (sock == -1) {
+    std::cerr << "socket() failed: " << std::strerror(errno) << "\n";
     return false;
+  }
 
   struct sockaddr_in6 address{};
   address.sin6_family = AF_INET6;
   address.sin6_port = htons(port);
   const std::string& connect_host = (host == "::") ? "::1" : host;
-  if (inet_pton(AF_INET6, connect_host.c_str(), &address.sin6_addr) != 1) {
+  int pton_rv = inet_pton(AF_INET6, connect_host.c_str(), &address.sin6_addr);
+  if (pton_rv != 1) {
+    if (pton_rv == 0) {
+      std::cerr << "inet_pton: '" << connect_host
+                << "' is not a valid IPv6 address\n";
+    } else {
+      std::cerr << "inet_pton failed for '" << connect_host
+                << "': " << std::strerror(errno) << "\n";
+    }
     close(sock);
     return false;
   }
 
   if (connect(sock, reinterpret_cast<struct sockaddr*>(&address),
               sizeof(address)) != 0) {
+    std::cerr << "connect to " << connect_host << ":" << port
+              << " failed: " << std::strerror(errno) << "\n";
     close(sock);
     return false;
   }
@@ -57,6 +70,7 @@ static bool SendHttpRequest(const std::string& host,
   while (remain > 0) {
     ssize_t w = send(sock, p + sent, (size_t)remain, 0);
     if (w <= 0) {
+      std::cerr << "send() failed: " << std::strerror(errno) << "\n";
       close(sock);
       return false;
     }
@@ -68,6 +82,11 @@ static bool SendHttpRequest(const std::string& host,
   ssize_t n;
   while ((n = recv(sock, buf, sizeof(buf), 0)) > 0)
     http_response->append(buf, (size_t)n);
+  if (n < 0) {
+    std::cerr << "recv() failed: " << std::strerror(errno) << "\n";
+    close(sock);
+    return false;
+  }
   close(sock);
   return true;
 }
@@ -87,23 +106,6 @@ static void PrintHelp() {
       << "  put <server_path> <local_path>   -- upload/replace resource\n";
   std::cout << "  help                             -- this message\n";
   std::cout << "  quit | exit                      -- quit\n";
-}
-
-// Process server path from user input
-static std::string MakeServerPath(const std::string& server_path) {
-  if (server_path.empty())
-    return std::string();
-  // if the client provided a leading directory like "test_tree/...",
-  // strip that first path component since servers are given the
-  // files_root ("test_tree") and expect paths relative to it.
-  std::string res_server_path = server_path;
-  // strip a common prefix 'test_tree/' if present
-  const std::string prefix = "test_tree/";
-  if (res_server_path.rfind(prefix, 0) == 0)
-    res_server_path = res_server_path.substr(prefix.size());
-  if (res_server_path.front() != '/')
-    return std::string("/static/") + res_server_path;
-  return res_server_path;
 }
 
 static bool parse_status(const std::string& http_response, int* status_out) {
@@ -154,7 +156,7 @@ int main(int argc, char** argv) {
         std::cout << "get requires <server_path>\n";
         continue;
       }
-      std::string path = MakeServerPath(server_path);
+      std::string path = "/static/" + server_path;
 
       std::string http_response;
       if (!SendHttpRequest(host, port, "GET", path, {}, &http_response)) {
@@ -211,7 +213,7 @@ int main(int argc, char** argv) {
         std::cout << "delete requires <server_path>\n";
         continue;
       }
-      std::string path = MakeServerPath(server_path);
+      std::string path = "/static/" + server_path;
       std::string http_response;
       if (!SendHttpRequest(host, port, "DELETE", path, {}, &http_response)) {
         std::cout << "request failed\n";
@@ -225,22 +227,6 @@ int main(int argc, char** argv) {
       if (code >= 200 && code < 300) {
         std::cout << "OK\n";
         continue;
-      }
-      // If delete failed, try stripping a leading path component and retry.
-      // This helps when the client sent e.g. 'test_tree/books/...' but the
-      // server's files_root is already 'test_tree' (so it expects 'books/...').
-      auto slash = server_path.find('/');
-      if (slash != std::string::npos) {
-        std::string alt = server_path.substr(slash + 1);
-        std::string alt_path = MakeServerPath(alt);
-        std::string resp2;
-        if (SendHttpRequest(host, port, "DELETE", alt_path, {}, &resp2)) {
-          int code2 = 0;
-          if (parse_status(resp2, &code2) && code2 >= 200 && code2 < 300) {
-            std::cout << "OK\n";
-            continue;
-          }
-        }
       }
       std::cout << "HTTP " << code << "\n";
       continue;
@@ -261,7 +247,7 @@ int main(int argc, char** argv) {
       std::string data((std::istreambuf_iterator<char>(in)),
                        std::istreambuf_iterator<char>());
       std::string method = (command == "post") ? "POST" : "PUT";
-      std::string path = MakeServerPath(server_path);
+      std::string path = "/static/" + server_path;
       std::string http_response;
       if (!SendHttpRequest(host, port, method, path, data, &http_response)) {
         std::cout << "request failed\n";
