@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <mutex>
-#include <utility>
 
 namespace searchserver {
 
@@ -24,8 +23,7 @@ void ThreadPool::ThreadLoop() {
   }
 }
 
-ThreadPool::ThreadPool(size_t num_threads)
-    : m_killthreads(false) {
+ThreadPool::ThreadPool(size_t num_threads) : m_killthreads(false) {
   for (size_t i = 0; i < num_threads; ++i) {
     m_thread_vec.emplace_back(&ThreadPool::ThreadLoop, this);
   }

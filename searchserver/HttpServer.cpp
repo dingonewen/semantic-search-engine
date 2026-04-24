@@ -6,21 +6,24 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <signal.h>
 #include <sys/socket.h>
+#include <sys/time.h>  // NOLINT(misc-include-cleaner) — provides timeval
 #include <sys/types.h>
 #include <unistd.h>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace {
@@ -56,29 +59,82 @@ struct ClientCtx {
 };
 
 /*
-HandleClient's inner logic was split into ReadRawRequest, HandleGetRequest,
-HandleStaticMutation, and SendAll for tidy-check
+HandleClient's inner logic was split into ReadHeaders, ReadBody,
+ReadRawRequest, HandleGetRequest, HandleStaticMutation, and SendAll for
+tidy-check (cognitive complexity limit)
 */
-// read until \r\n\r\n (end of headers), chunk by chunk
-auto ReadRawRequest(int fd) -> std::string {
-  std::string raw;
+// reads raw bytes from fd into raw until \r\n\r\n is found
+auto ReadHeaders(int fd, std::string* raw) -> bool {
   std::array<char, 4096> buf{};
-  while (true) {
+  while (raw->find("\r\n\r\n") == std::string::npos) {
     const ssize_t n = read(fd, buf.data(), buf.size() - 1);
     if (n < 0) {
       if ((errno == EAGAIN) || (errno == EINTR)) {
+        if (g_done != 0) {
+          return false;  // server shutting down
+        }
+        continue;
+      }
+      return false;
+    }
+    if (n == 0) {
+      return false;  // client disconnected
+    }
+    raw->append(buf.data(), static_cast<size_t>(n));
+  }
+  return true;
+}
+
+// reads body bytes based on Content-Length header, appending to raw
+void ReadBody(int fd, std::string* raw, size_t body_offset) {
+  constexpr std::string_view k_cl_key = "content-length:";
+  std::string lower_hdr = raw->substr(0, body_offset);
+  for (char& c : lower_hdr) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  const size_t cl_pos = lower_hdr.find(k_cl_key);
+  if (cl_pos == std::string::npos) {
+    return;
+  }
+  size_t val_pos = cl_pos + k_cl_key.size();
+  while (val_pos < lower_hdr.size() && lower_hdr[val_pos] == ' ') {
+    ++val_pos;
+  }
+  if (val_pos >= raw->size() ||
+      !std::isdigit(static_cast<unsigned char>((*raw)[val_pos]))) {
+    return;
+  }
+  const size_t content_length = std::stoul(raw->substr(val_pos));
+  std::array<char, 4096> buf{};
+  size_t body_read = raw->size() - body_offset;
+  while (body_read < content_length) {
+    const size_t to_read = std::min(content_length - body_read, buf.size() - 1);
+    const ssize_t n = read(fd, buf.data(), to_read);
+    if (n < 0) {
+      if ((errno == EAGAIN) || (errno == EINTR)) {
+        if (g_done != 0) {
+          break;
+        }
         continue;
       }
       break;
     }
     if (n == 0) {
-      break;  // client disconnected
-    }
-    raw.append(buf.data(), static_cast<size_t>(n));
-    if (raw.find("\r\n\r\n") != std::string::npos) {
       break;
     }
+    raw->append(buf.data(), static_cast<size_t>(n));
+    body_read += static_cast<size_t>(n);
   }
+}
+
+// read until \r\n\r\n (end of headers), chunk by chunk, then read body
+auto ReadRawRequest(int fd) -> std::string {
+  std::string raw;
+  if (!ReadHeaders(fd, &raw)) {
+    return raw;
+  }
+  const size_t body_offset = raw.find("\r\n\r\n") + 4;
+  ReadBody(fd, &raw, body_offset);
   return raw;
 }
 
@@ -111,13 +167,27 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
 auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
   const std::string rel = r.path.substr(8);
   if (r.method == "PUT") {
-    return StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
+    const auto resp =
+        StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
+    if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      ctx->index->AddFile(rel);  // update search index on success
+    }
+    return resp;
   }
   if (r.method == "POST") {
-    return StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
+    const auto resp =
+        StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
+    if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      ctx->index->AddFile(rel);  // update search index on success
+    }
+    return resp;
   }
   if (r.method == "DELETE") {
-    return StaticDelete(ctx->files_root, rel);
+    const auto resp = StaticDelete(ctx->files_root, rel);
+    if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      ctx->index->RemoveFile(rel);  // update search index on success
+    }
+    return resp;
   }
   return MakeResponse(k_http_not_implemented, "Not Implemented", "text/plain",
                       "Not Implemented");
@@ -150,6 +220,11 @@ void SendAll(int fd, const std::string& response) {
 // loop back and read next request
 void HandleClient(void* arg) {
   auto* ctx = static_cast<ClientCtx*>(arg);
+  // 1-second read timeout: lets the thread wake up and check g_done on Ctrl+C
+  // instead of blocking in read() forever on a keep-alive connection
+  // NOLINTNEXTLINE(misc-include-cleaner) — timeval/SO_RCVTIMEO from sys/time.h and sys/socket.h
+  struct timeval tv{.tv_sec = 1, .tv_usec = 0};
+  setsockopt(ctx->client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));  // NOLINT(misc-include-cleaner)
   // keep-alive loop: each iteration handles one full request-response cycle
   // browser may send multiple requests on same connection before closing
   while (true) {
@@ -243,7 +318,7 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // SO_REUSEADDR tells the OS to skip that wait and let you reuse the port
   // immediately bind(), listen() derived from server_accept_rw_close.cpp
   const int optval = 1;
-  setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+  setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));  // NOLINT(misc-include-cleaner)
 
   struct sockaddr_in6 address{};
   address.sin6_family = AF_INET6;
@@ -267,8 +342,8 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
   std::cout << "accepting connections...\n";
   // accept loop, derived from server_accept_rw_close.cpp
   // accepting a connection from a client and echo it
-  while (g_done ==
-         0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
+  // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) — ctx freed by HandleClient
+  while (g_done == 0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
     struct sockaddr_storage caddr{};
     socklen_t caddr_len = sizeof(caddr);
     const int client_fd = accept(
