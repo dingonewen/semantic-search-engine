@@ -30,8 +30,9 @@
 #include <utility>
 
 namespace {
-std::atomic<int> g_done{0};       // set to 1 on SIGINT
-std::atomic<int> g_listen_fd{-1};  // set before accept loop so handler can close it
+std::atomic<int> g_done{0};  // set to 1 on SIGINT
+std::atomic<int> g_listen_fd{
+    -1};  // set before accept loop so handler can close it
 
 void SigintHandler(int /*signo*/) {
   g_done = 1;
@@ -57,7 +58,7 @@ struct ClientCtx {
   int client_fd;
   std::string home_page;
   std::string files_root;
-  InvertedIndex* index;           // pointer to the search index for queries
+  InvertedIndex* index;          // pointer to the search index for queries
   std::shared_mutex* index_mtx;  // guards index for concurrent read/write
 };
 
@@ -104,7 +105,7 @@ void ReadBody(int fd, std::string* raw, size_t body_offset) {
     ++val_pos;
   }
   if (val_pos >= raw->size() ||
-      !std::isdigit(static_cast<unsigned char>((*raw)[val_pos]))) {
+      std::isdigit(static_cast<unsigned char>((*raw)[val_pos])) == 0) {
     return;
   }
   const size_t content_length = std::stoul(raw->substr(val_pos));
@@ -229,7 +230,7 @@ void HandleClient(void* arg) {
   auto* ctx = static_cast<ClientCtx*>(arg);
   // 1-second read timeout: lets the thread wake up and check g_done on Ctrl+C
   // instead of blocking in read() forever on a keep-alive connection
-  // NOLINTNEXTLINE(misc-include-cleaner) — timeval/SO_RCVTIMEO from sys/time.h and sys/socket.h
+  // NOLINTNEXTLINE(misc-include-cleaner)
   struct timeval tv{.tv_sec = 1, .tv_usec = 0};
   setsockopt(ctx->client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));  // NOLINT(misc-include-cleaner)
   // keep-alive loop: each iteration handles one full request-response cycle
@@ -292,11 +293,11 @@ socket
 auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // register SIGINT handler
 
-  struct sigaction sigact{};
-  sigact.sa_handler = SigintHandler;
-  // remove SA_RESTART flag to continue re-check g_dne
+  struct sigaction sigact{};  // NOLINT(misc-include-cleaner)
+  sigact.sa_handler = SigintHandler;  // NOLINT(misc-include-cleaner)
+  // remove SA_RESTART flag to continue re-check g_done
   sigact.sa_flags = 0;
-  sigaction(SIGINT, &sigact, nullptr);
+  sigaction(SIGINT, &sigact, nullptr);  // NOLINT(misc-include-cleaner)
 
   // read home page HTML once at startup — initial_response.txt is a full HTTP
   // response, so strip the headers and keep only the HTML body after \n\n
@@ -349,7 +350,7 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
   std::cout << "accepting connections...\n";
   // accept loop, derived from server_accept_rw_close.cpp
   // accepting a connection from a client and echo it
-  // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) — ctx freed by HandleClient
+  // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
   while (g_done == 0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
     struct sockaddr_storage caddr{};
     socklen_t caddr_len = sizeof(caddr);
