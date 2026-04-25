@@ -232,7 +232,8 @@ void HandleClient(void* arg) {
   // instead of blocking in read() forever on a keep-alive connection
   // NOLINTNEXTLINE(misc-include-cleaner)
   struct timeval tv{.tv_sec = 1, .tv_usec = 0};
-  setsockopt(ctx->client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));  // NOLINT(misc-include-cleaner)
+  // NOLINTNEXTLINE(misc-include-cleaner)
+  setsockopt(ctx->client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   // keep-alive loop: each iteration handles one full request-response cycle
   // browser may send multiple requests on same connection before closing
   while (true) {
@@ -293,7 +294,7 @@ socket
 auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // register SIGINT handler
 
-  struct sigaction sigact{};  // NOLINT(misc-include-cleaner)
+  struct sigaction sigact{};          // NOLINT(misc-include-cleaner)
   sigact.sa_handler = SigintHandler;  // NOLINT(misc-include-cleaner)
   // remove SA_RESTART flag to continue re-check g_done
   sigact.sa_flags = 0;
@@ -326,7 +327,8 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // SO_REUSEADDR tells the OS to skip that wait and let you reuse the port
   // immediately bind(), listen() derived from server_accept_rw_close.cpp
   const int optval = 1;
-  setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));  // NOLINT(misc-include-cleaner)
+  // NOLINTNEXTLINE(misc-include-cleaner)
+  setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
   struct sockaddr_in6 address{};
   address.sin6_family = AF_INET6;
@@ -351,7 +353,8 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
   // accept loop, derived from server_accept_rw_close.cpp
   // accepting a connection from a client and echo it
   // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-  while (g_done == 0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
+  while (g_done ==
+         0) {  // loop exits when Ctrl+C pressed and SIGINT sets g_done = 1
     struct sockaddr_storage caddr{};
     socklen_t caddr_len = sizeof(caddr);
     const int client_fd = accept(

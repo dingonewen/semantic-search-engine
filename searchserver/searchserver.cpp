@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   const size_t hw = std::thread::hardware_concurrency();
-  HttpServer srv(port, files_root, hw != 0 ? hw : 8);
+  // no -1 for main thread: it blocks in accept() and does no CPU work
+  HttpServer srv(port, files_root, hw != 0 ? hw : 4);
   return srv.Run("sample_http/initial_response.txt");
 }

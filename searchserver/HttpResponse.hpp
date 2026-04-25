@@ -7,9 +7,11 @@
 // use these for tidy-check purposes
 static constexpr int k_http_ok = 200;
 static constexpr int k_http_created = 201;
+static constexpr int k_http_no_content = 204;
 static constexpr int k_http_forbidden = 403;
 static constexpr int k_http_not_found = 404;
 static constexpr int k_http_conflict = 409;
+static constexpr int k_http_internal_error = 500;
 static constexpr int k_http_not_implemented = 501;
 
 // Build a complete HTTP/1.1 response string ready to send over a socket.
