@@ -55,8 +55,8 @@ static std::string CheckWithinRoot(const std::string& files_root,
   return "";
 }
 
-std::string StaticGet(const std::string& files_root,
-                      const std::string& relpath) {
+auto StaticGet(const std::string& files_root, const std::string& relpath)
+    -> std::string {
   // Check path traversal BEFORE existence check
   std::string error1 = CheckWithinRoot(files_root, relpath);
   if (!error1.empty()) {
@@ -83,10 +83,10 @@ static std::string WriteFile(const std::filesystem::path& target,
   return "";
 }
 
-std::string StaticPut(const std::string& files_root,
-                      const std::string& relpath,
-                      const std::string& data,
-                      bool overwrite) {
+auto StaticPut(const std::string& files_root,
+               const std::string& relpath,
+               const std::string& data,
+               bool overwrite) -> std::string {
   try {
     // Check if the client request to access any files outside of the
     // root directory
@@ -121,8 +121,8 @@ std::string StaticPut(const std::string& files_root,
   }
 }
 
-std::string StaticDelete(const std::string& files_root,
-                         const std::string& relpath) {
+auto StaticDelete(const std::string& files_root, const std::string& relpath)
+    -> std::string {
   try {
     // Check path traversal BEFORE existence check
     std::string error1 = CheckWithinRoot(files_root, relpath);

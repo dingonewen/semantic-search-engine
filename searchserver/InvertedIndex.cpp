@@ -1,8 +1,13 @@
 #include "InvertedIndex.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 using namespace std::filesystem;
 
@@ -10,14 +15,15 @@ using namespace std::filesystem;
 // delimiter: any charactor that is not alphanumeric
 // input: "Hello, world!"
 // output: ["hello", "world"]
-std::vector<std::string> InvertedIndex::Tokenize(const std::string& s) {
+auto InvertedIndex::Tokenize(const std::string& s) -> std::vector<std::string> {
   std::vector<std::string> res;
   std::string curr;
   // scan the input string char by char
-  for (char c : s) {
-    if (std::isalnum((unsigned char)c)) {
+  for (const char c : s) {
+    if (std::isalnum(static_cast<unsigned char>(c)) != 0) {
       // search is case insensitive
-      curr.push_back(static_cast<char>(std::tolower((unsigned char)c)));
+      curr.push_back(
+          static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
     } else {
       if (!curr.empty()) {
         res.push_back(curr);
@@ -33,12 +39,12 @@ std::vector<std::string> InvertedIndex::Tokenize(const std::string& s) {
 
 void InvertedIndex::Build(const std::string& root) {
   m_count.clear();
-  for (auto& p : recursive_directory_iterator(root)) {
+  for (const auto& p : recursive_directory_iterator(root)) {
     // skip folder and symlink
     if (!p.is_regular_file()) {
       continue;
     }
-    std::string path = p.path().string();
+    const std::string path = p.path().string();
     std::ifstream in(path);
     if (!in) {
       continue;
@@ -81,24 +87,24 @@ void InvertedIndex::AddFile(const std::string& path) {
   }
 }
 
-std::vector<std::pair<std::string, int>> InvertedIndex::SearchAndRank(
-    const std::vector<std::string>& terms) const {
+auto InvertedIndex::SearchAndRank(const std::vector<std::string>& terms) const
+    -> std::vector<std::pair<std::string, int>> {
   // map file to frequency: the number of terms appeared in each file
   std::unordered_map<std::string, int> scores;
-  for (auto term : terms) {
+  for (const auto& term : terms) {
     auto it = m_count.find(term);
     // the term did not appear in any of the files
     if (it == m_count.end()) {
       continue;
     }
-    for (auto& map : it->second) {
+    for (const auto& map : it->second) {
       scores[map.first] += map.second;
     }
   }
   // convert map to vector of pair in order to sort by value
   std::vector<std::pair<std::string, int>> res(scores.begin(), scores.end());
   // sort by value in descending order
-  std::sort(res.begin(), res.end(),
-            [](auto& a, auto& b) { return a.second > b.second; });
+  std::ranges::sort(
+      res, [](const auto& a, const auto& b) { return a.second > b.second; });
   return res;
 }

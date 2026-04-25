@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // Maps words to the files that contain them and their term frequencies.
@@ -23,11 +24,11 @@ class InvertedIndex {
   // term-frequency score (sum of per-term counts across all matching files).
   // Input: terms, list of lowercase search terms
   // Output: vector of (relative filename, score) pairs, sorted by score desc.
-  std::vector<std::pair<std::string, int>> SearchAndRank(
-      const std::vector<std::string>& terms) const;
+  auto SearchAndRank(const std::vector<std::string>& terms) const
+      -> std::vector<std::pair<std::string, int>>;
 
   // Splits text into lowercase alphanumeric tokens.
-  static std::vector<std::string> Tokenize(const std::string& text);
+  static auto Tokenize(const std::string& s) -> std::vector<std::string>;
 
  private:
   // m_count[word][filepath] = count of 'word' in 'filepath'
