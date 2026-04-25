@@ -22,6 +22,8 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -55,7 +57,8 @@ struct ClientCtx {
   int client_fd;
   std::string home_page;
   std::string files_root;
-  InvertedIndex* index;  // pointer to the search index for queries
+  InvertedIndex* index;           // pointer to the search index for queries
+  std::shared_mutex* index_mtx;  // guards index for concurrent read/write
 };
 
 /*
@@ -145,6 +148,7 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
   }
   if (r.path == "/query") {
     auto terms = SplitTerms(r.query);
+    const std::shared_lock<std::shared_mutex> lock(*ctx->index_mtx);
     auto results = ctx->index->SearchAndRank(terms);
     std::string body = ctx->home_page;
     std::string links;
@@ -170,6 +174,7 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
     const auto resp =
         StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
     if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
       ctx->index->AddFile(rel);  // update search index on success
     }
     return resp;
@@ -178,6 +183,7 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
     const auto resp =
         StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
     if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
       ctx->index->AddFile(rel);  // update search index on success
     }
     return resp;
@@ -185,6 +191,7 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
   if (r.method == "DELETE") {
     const auto resp = StaticDelete(ctx->files_root, rel);
     if (resp.find("HTTP/1.1 2") != std::string::npos) {
+      const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
       ctx->index->RemoveFile(rel);  // update search index on success
     }
     return resp;
@@ -259,8 +266,8 @@ void HandleClient(void* arg) {
 HttpServer::HttpServer(int port, std::string files_root, size_t num_threads)
     : m_port(port),
       m_files_root(std::move(files_root)),
-      m_pool(num_threads),
-      m_index() {
+      m_index(),
+      m_pool(num_threads) {
   m_index.Build(m_files_root);  // m_index is a search index maps words to the
                                 // files that contain them
 }
@@ -372,7 +379,8 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
     auto* ctx = new ClientCtx{.client_fd = client_fd,
                               .home_page = home_page,
                               .files_root = m_files_root,
-                              .index = &m_index};
+                              .index = &m_index,
+                              .index_mtx = &m_index_mtx};
     m_pool.Dispatch({.func = HandleClient, .arg = ctx});
   }
   // only close if signal handler hasn't already closed it

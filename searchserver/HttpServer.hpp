@@ -2,6 +2,7 @@
 #define HTTPSERVER_HPP_
 
 #include <cstddef>
+#include <shared_mutex>
 #include <string>
 
 #include "InvertedIndex.hpp"
@@ -35,8 +36,9 @@ class HttpServer {
  private:
   int m_port;
   std::string m_files_root;
-  ThreadPool m_pool;      // Pool of worker threads handling connections
-  InvertedIndex m_index;  // Full-text index built from m_files_root
+  InvertedIndex m_index;        // Full-text index built from m_files_root
+  std::shared_mutex m_index_mtx;  // guards m_index for concurrent read/write
+  ThreadPool m_pool;            // declared last: destroyed first, joining threads before m_index
 };
 
 }  // namespace searchserver
