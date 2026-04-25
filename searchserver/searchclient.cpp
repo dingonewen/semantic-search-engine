@@ -13,6 +13,13 @@
 #include <string>
 #include <vector>
 
+// Performs a complete http request/response cycle over a TCP socket
+// host: server's IPv6 address string
+// port: the server port number
+// path: the request path
+// body: the request body, used for POST/PUT. For GET/DELETE, the caller passes
+// {}
+// http_response: output parameter, store raw http response from the server
 static bool SendHttpRequest(const std::string& host,
                             uint16_t port,
                             const std::string& method,
@@ -26,6 +33,7 @@ static bool SendHttpRequest(const std::string& host,
     return false;
   }
 
+  // Set up the server address
   struct sockaddr_in6 address{};
   address.sin6_family = AF_INET6;
   address.sin6_port = htons(port);
@@ -43,6 +51,7 @@ static bool SendHttpRequest(const std::string& host,
     return false;
   }
 
+  // Connect to server
   if (connect(sock, reinterpret_cast<struct sockaddr*>(&address),
               sizeof(address)) != 0) {
     std::cerr << "connect to " << connect_host << ":" << port
@@ -51,33 +60,34 @@ static bool SendHttpRequest(const std::string& host,
     return false;
   }
 
-  std::ostringstream req;
-  req << method << " " << path << " HTTP/1.1\r\n";
-  req << "Host: " << host << ":" << port << "\r\n";
-  req << "User-Agent: searchclient/1.0\r\n";
+  // Send request
+  std::ostringstream request;
+  request << method << " " << path << " HTTP/1.1\r\n";
+  request << "Host: " << host << ":" << port << "\r\n";
+  request << "User-Agent: searchclient/1.0\r\n";
   if (!body.empty()) {
-    req << "Content-Length: " << body.size() << "\r\n";
-    req << "Content-Type: application/octet-stream\r\n";
+    request << "Content-Length: " << body.size() << "\r\n";
+    request << "Content-Type: application/octet-stream\r\n";
   }
-  req << "Connection: close\r\n";
-  req << "\r\n";
-  req << body;
+  request << "Connection: close\r\n";
+  request << "\r\n";
+  request << body;
 
-  std::string rq = req.str();
+  std::string req = request.str();
   ssize_t sent = 0;
-  const char* p = rq.data();
-  ssize_t remain = (ssize_t)rq.size();
+  ssize_t remain = (ssize_t)req.size();
   while (remain > 0) {
-    ssize_t w = send(sock, p + sent, (size_t)remain, 0);
-    if (w <= 0) {
+    ssize_t res = send(sock, req.data() + sent, (size_t)remain, 0);
+    if (res <= 0) {
       std::cerr << "send() failed: " << std::strerror(errno) << "\n";
       close(sock);
       return false;
     }
-    sent += w;
-    remain -= w;
+    sent += res;
+    remain -= res;
   }
 
+  // Receive data from server socket
   char buf[4096];
   ssize_t n;
   while ((n = recv(sock, buf, sizeof(buf), 0)) > 0)
@@ -108,7 +118,9 @@ static void PrintHelp() {
   std::cout << "  quit | exit                      -- quit\n";
 }
 
-static bool parse_status(const std::string& http_response, int* status_out) {
+// Extracts the http status code from http response and writes it into
+// status_out. Returns true on success and false if parsing fails
+static bool ParseStatus(const std::string& http_response, int* status_out) {
   std::istringstream ss(http_response);
   std::string line;
   if (!std::getline(ss, line))
@@ -118,6 +130,8 @@ static bool parse_status(const std::string& http_response, int* status_out) {
   ls >> proto;
   int code;
   ls >> code;
+  // Check if the stream is in fail state (>> code didn't successfully parse an
+  // int)
   if (!ls)
     return false;
   *status_out = code;
@@ -163,6 +177,7 @@ int main(int argc, char** argv) {
         std::cout << "request failed\n";
         continue;
       }
+      // Locates the body of the http response
       size_t pos = http_response.find("\r\n\r\n");
       size_t body_pos = std::string::npos;
       if (pos != std::string::npos)
@@ -176,7 +191,7 @@ int main(int argc, char** argv) {
                              ? http_response
                              : http_response.substr(body_pos);
       int code = 0;
-      parse_status(http_response, &code);
+      ParseStatus(http_response, &code);
       if (code >= 400) {
         // extract the HTTP reason phrase and print it plainly
         std::istringstream status_line(http_response);
@@ -192,9 +207,10 @@ int main(int argc, char** argv) {
         std::cout << reason << "\n";
         continue;
       }
+      // Print the response body to stdout
       if (local_path.empty())
         std::cout << body << std::endl;
-      else {
+      else {  // Print the reponse body to local file
         std::ofstream out(local_path, std::ios::out | std::ios::binary);
         if (!out) {
           std::cout << "failed to open " << local_path << "\n";
@@ -220,7 +236,7 @@ int main(int argc, char** argv) {
         continue;
       }
       int code = 0;
-      if (!parse_status(http_response, &code)) {
+      if (!ParseStatus(http_response, &code)) {
         std::cout << "failed to parse response\n";
         continue;
       }
@@ -232,6 +248,7 @@ int main(int argc, char** argv) {
       continue;
     }
 
+    // Send data to server
     if (command == "post" || command == "put") {
       std::string server_path, local_path;
       input_string >> server_path >> local_path;
@@ -254,7 +271,7 @@ int main(int argc, char** argv) {
         continue;
       }
       int code = 0;
-      parse_status(http_response, &code);
+      ParseStatus(http_response, &code);
       if (code >= 200 && code < 300) {
         std::cout << "OK\n";
       } else {
