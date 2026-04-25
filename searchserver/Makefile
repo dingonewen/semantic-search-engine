@@ -7,8 +7,8 @@ CXXFLAGS += -g3 -gdwarf-4 -Wall -Wpedantic -Wextra -std=c++2b
 
 TESTOBJS = test_threadpool.o test_invertedindex.o test_httprequest.o test_httpresponse.o test_staticfile.o test_suite.o catch.o 
 
-CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp InvertedIndex.cpp
-HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp InvertedIndex.hpp
+CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp InvertedIndex.cpp StaticFile.cpp
+HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp InvertedIndex.hpp StaticFile.hpp
 
 
 all: test_suite searchserver searchclient
