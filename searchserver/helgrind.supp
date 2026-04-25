@@ -1,0 +1,19 @@
+# helgrind 3.18.x on ARM64 does not recognize std::atomic store/load as
+# synchronization, so it falsely reports a race on g_done between the
+# SIGINT signal handler (write) and worker threads (read). The code is
+# correct: g_done is std::atomic<int> and both accesses are lock-free atomic
+# operations. Suppress these two false positives.
+{
+   g_done_atomic_write_sighandler
+   Helgrind:Race
+   fun:*store*
+   fun:*__atomic_base*
+   fun:*SigintHandler*
+}
+{
+   g_done_atomic_read_worker
+   Helgrind:Race
+   fun:*load*
+   fun:*__atomic_base*
+   fun:*ReadHeaders*
+}

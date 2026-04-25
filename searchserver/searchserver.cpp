@@ -34,6 +34,7 @@ int main(int argc, char** argv) {
     std::cerr << "Error: " << files_root << " is not a valid directory\n";
     return EXIT_FAILURE;
   }
-  HttpServer srv(port, files_root, 8);
+  const size_t hw = std::thread::hardware_concurrency();
+  HttpServer srv(port, files_root, hw != 0 ? hw : 8);
   return srv.Run("sample_http/initial_response.txt");
 }
