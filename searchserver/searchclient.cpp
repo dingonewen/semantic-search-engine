@@ -138,6 +138,11 @@ static bool ParseStatus(const std::string& http_response, int* status_out) {
   return true;
 }
 
+/*
+ * Accept and process Command Line Shell
+ * This program connects to the server and begins reading input from the command
+ * line. Read lines of input until the user types CTRL + D (eof).
+ */
 int main(int argc, char** argv) {
   if (argc < 3) {
     std::cerr << "Usage: " << argv[0] << " <server> <port>\n";
@@ -149,6 +154,7 @@ int main(int argc, char** argv) {
   std::string line;
   while (true) {
     std::cout << ">> ";
+    // Ctrl + D signals eof on stdin and std::getline returns a falsy stream ref
     if (!std::getline(std::cin, line))
       break;
     if (line.empty())

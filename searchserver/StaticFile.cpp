@@ -52,19 +52,19 @@ auto CheckWithinRoot(const std::string& files_root,
       !can_target.starts_with(can_root) ||
       (can_target.size() > can_root.size() &&
        can_target[can_root.size()] != '/')) {
-    return MakeResponse(k_http_forbidden, "<h1>403 Forbidden</h1>",
-                        "text/html", "Forbidden");
+    return MakeResponse(k_http_forbidden, "<h1>403 Forbidden</h1>", "text/html",
+                        "Forbidden");
   }
   return "";
 }
 
 // Writes data to target. Returns a 500 response on failure, else ""
-auto WriteFile(const std::filesystem::path& target,
-               const std::string& data) -> std::string {
+auto WriteFile(const std::filesystem::path& target, const std::string& data)
+    -> std::string {
   // write in raw bytes and truncate existing content on open
   std::ofstream out(target.string(), std::ios::binary | std::ios::trunc);
   if (!out) {
-    return MakeResponse(k_http_internal_server_error,
+    return MakeResponse(k_http_internal_error,
                         "<h1>500 Internal Server Error</h1>", "text/html",
                         "Internal Server Error");
   }
@@ -74,8 +74,8 @@ auto WriteFile(const std::filesystem::path& target,
 
 }  // namespace
 
-auto StaticGet(const std::string& files_root,
-               const std::string& relpath) -> std::string {
+auto StaticGet(const std::string& files_root, const std::string& relpath)
+    -> std::string {
   // Check path traversal BEFORE existence check
   std::string error1 = CheckWithinRoot(files_root, relpath);
   if (!error1.empty()) {
@@ -103,8 +103,8 @@ auto StaticPut(const std::string& files_root,
     // existing file
     auto exist = std::filesystem::exists(relpath);
     if (exist && !overwrite) {
-      return MakeResponse(k_http_conflict, "<h1>409 Conflict</h1>",
-                          "text/html", "Conflict");
+      return MakeResponse(k_http_conflict, "<h1>409 Conflict</h1>", "text/html",
+                          "Conflict");
     }
     std::string error2 = WriteFile(relpath, data);
     if (!error2.empty()) {
@@ -115,14 +115,14 @@ auto StaticPut(const std::string& files_root,
   } catch (const std::exception&
                e) {  // std::filesystem::canonical throws filesystem_error if
                      // files_root doesn't exist
-    return MakeResponse(k_http_internal_server_error,
+    return MakeResponse(k_http_internal_error,
                         "<h1>500 Internal Server Error</h1>", "text/html",
                         "Internal Server Error");
   }
 }
 
-auto StaticDelete(const std::string& files_root,
-                  const std::string& relpath) -> std::string {
+auto StaticDelete(const std::string& files_root, const std::string& relpath)
+    -> std::string {
   try {
     // Check path traversal BEFORE existence check
     std::string error1 = CheckWithinRoot(files_root, relpath);
@@ -138,7 +138,7 @@ auto StaticDelete(const std::string& files_root,
     std::error_code ec;
     const bool success = std::filesystem::remove(relpath, ec);
     if (!success || ec) {
-      return MakeResponse(k_http_internal_server_error,
+      return MakeResponse(k_http_internal_error,
                           "<h1>500 Internal Server Error</h1>", "text/html",
                           "Internal Server Error");
     }
@@ -147,7 +147,7 @@ auto StaticDelete(const std::string& files_root,
   } catch (const std::exception&
                e) {  // std::filesystem::canonical throws filesystem_error if
                      // files_root doesn't exist
-    return MakeResponse(k_http_internal_server_error,
+    return MakeResponse(k_http_internal_error,
                         "<h1>500 Internal Server Error</h1>", "text/html",
                         "Internal Server Error");
   }
