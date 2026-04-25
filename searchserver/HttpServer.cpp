@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
 #include <cerrno>
 #include <cstddef>
@@ -29,9 +30,8 @@
 #include <utility>
 
 namespace {
-volatile sig_atomic_t g_done = 0;  // set to 1 on SIGINT
-volatile sig_atomic_t g_listen_fd =
-    -1;  // set before accept loop so handler can close it
+std::atomic<int> g_done{0};       // set to 1 on SIGINT
+std::atomic<int> g_listen_fd{-1};  // set before accept loop so handler can close it
 
 void SigintHandler(int /*signo*/) {
   g_done = 1;

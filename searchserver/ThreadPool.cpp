@@ -30,20 +30,16 @@ ThreadPool::ThreadPool(size_t num_threads) : m_killthreads(false) {
 }
 
 ThreadPool::~ThreadPool() {
-  {
-    const std::scoped_lock<std::mutex> lock(m_mtx);
-    m_killthreads = true;
-  }
+  const std::scoped_lock<std::mutex> lock(m_mtx);
+  m_killthreads = true;
   m_cond.notify_all();
   // jthreads auto-join when m_thread_vec is destroyed
 }
 
 // Enqueue a Task for dispatch.
 void ThreadPool::Dispatch(Task t) {
-  {
-    const std::scoped_lock<std::mutex> lock(m_mtx);
-    m_work_queue.push_back(t);
-  }
+  const std::scoped_lock<std::mutex> lock(m_mtx);
+  m_work_queue.push_back(t);
   m_cond.notify_one();
 }
 
