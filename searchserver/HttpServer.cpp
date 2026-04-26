@@ -157,7 +157,15 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
       links += "<li><a href=\"/static/" + p.first + "\">" + p.first + "</a> [" +
                std::to_string(p.second) + "]</li>\n";
     }
-    body += "<p>" + std::to_string(results.size()) + " results found</p>\n";
+    std::string query_str;
+    for (size_t i = 0; i < terms.size(); ++i) {
+      if (i > 0) {
+        query_str += " ";
+      }
+      query_str += terms[i];
+    }
+    body += "<p>" + std::to_string(results.size()) + " results found for <b>" +
+            query_str + "</b></p>\n";
     body += "<ul>\n" + links + "</ul>\n";
     return MakeResponse(k_http_ok, body, "text/html");
   }
