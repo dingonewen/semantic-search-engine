@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -146,10 +147,22 @@ static bool ParseStatus(const std::string& http_response, int* status_out) {
 int main(int argc, char** argv) {
   if (argc < 3) {
     std::cerr << "Usage: " << argv[0] << " <server> <port>\n";
-    return 1;
+    return EXIT_FAILURE;
   }
   std::string host = argv[1];
-  uint16_t port = static_cast<uint16_t>(std::stoi(argv[2]));
+  // validate port: must be a number >= 1024
+  int port_int = 0;
+  try {
+    port_int = std::stoi(argv[2]);
+  } catch (...) {
+    std::cerr << "Error: port must be a valid integer\n";
+    return EXIT_FAILURE;
+  }
+  if (port_int < 1024) {
+    std::cerr << "Error: port must be >= 1024\n";
+    return EXIT_FAILURE;
+  }
+  uint16_t port = static_cast<uint16_t>(port_int);
   PrintHelp();
   std::string line;
   while (true) {
