@@ -89,21 +89,36 @@ void InvertedIndex::AddFile(const std::string& path) {
 
 auto InvertedIndex::SearchAndRank(const std::vector<std::string>& terms) const
     -> std::vector<std::pair<std::string, int>> {
-  // map file to frequency: the number of terms appeared in each file
+  if (terms.empty()) {
+    return {};
+  }
+  // map file to cumulative term frequency across all query terms
   std::unordered_map<std::string, int> scores;
+  // track how many query terms each document matched
+  std::unordered_map<std::string, int> matchCount;
+
   for (const auto& term : terms) {
     auto it = m_count.find(term);
-    // the term did not appear in any of the files
+    // the term did not appear in any file — no document can match all terms
     if (it == m_count.end()) {
-      continue;
+      return {};
     }
-    for (const auto& map : it->second) {
-      scores[map.first] += map.second;
+    for (const auto& [file, freq] : it->second) {
+      scores[file] += freq;
+      matchCount[file]++;
     }
   }
-  // convert map to vector of pair in order to sort by value
-  std::vector<std::pair<std::string, int>> res(scores.begin(), scores.end());
-  // sort by value in descending order
+
+  // keep only documents that contain every query term
+  std::vector<std::pair<std::string, int>> res;
+  const int numTerms = static_cast<int>(terms.size());
+  for (const auto& [file, count] : matchCount) {
+    if (count == numTerms) {
+      res.emplace_back(file, scores[file]);
+    }
+  }
+
+  // sort by cumulative frequency in descending order
   std::ranges::sort(
       res, [](const auto& a, const auto& b) { return a.second > b.second; });
   return res;
