@@ -181,6 +181,51 @@ auto JoinTerms(const std::vector<std::string>& terms) -> std::string {
   return out;
 }
 
+// Escape a string for embedding in a JSON string literal.
+auto JsonStr(const std::string& s) -> std::string {
+  std::string out;
+  out.reserve(s.size());
+  for (const char c : s) {
+    switch (c) {
+      case '"':
+        out += "\\\"";
+        break;
+      case '\\':
+        out += "\\\\";
+        break;
+      case '\n':
+        out += "\\n";
+        break;
+      case '\r':
+        out += "\\r";
+        break;
+      case '\t':
+        out += "\\t";
+        break;
+      default:
+        out += c;
+    }
+  }
+  return out;
+}
+
+// Serialize a ranked list as a JSON array: [{"id":"...","score":N},...]
+template <typename T>
+auto RankedToJson(const std::vector<std::pair<std::string, T>>& v)
+    -> std::string {
+  std::string out = "[";
+  for (size_t i = 0; i < v.size(); ++i) {
+    if (i > 0) {
+      out += ',';
+    }
+    std::ostringstream ss;
+    ss << v[i].second;
+    out += "{\"id\":\"" + JsonStr(v[i].first) + "\",\"score\":" + ss.str() +
+           "}";
+  }
+  return out + "]";
+}
+
 // Escape special HTML characters for safe embedding in HTML.
 auto HtmlEscape(const std::string& s) -> std::string {
   std::string out;
@@ -249,6 +294,29 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
     }
     body += "</p>\n<ul>\n" + links + "</ul>\n";
     return MakeResponse(k_http_ok, body, "text/html");
+  }
+  if (r.path == "/api/search") {
+    const auto terms = SplitTerms(r.query);
+    if (terms.empty()) {
+      return MakeResponse(k_http_ok, "{\"error\":\"empty query\"}",
+                          "application/json");
+    }
+    const std::string query_str = JoinTerms(terms);
+
+    std::vector<std::pair<std::string, int>> bm25;
+    {
+      const std::shared_lock<std::shared_mutex> lock(*ctx->index_mtx);
+      bm25 = ctx->index->SearchAndRank(terms);
+    }
+    const auto semantic = ctx->vec->Search(query_str);
+    const auto hybrid = RrfMerge(bm25, semantic);
+
+    const std::string json =
+        "{\"query\":\"" + JsonStr(query_str) + "\"," +
+        "\"bm25\":" + RankedToJson(bm25) + "," +
+        "\"semantic\":" + RankedToJson(semantic) + "," +
+        "\"hybrid\":" + RankedToJson(hybrid) + "}";
+    return MakeResponse(k_http_ok, json, "application/json");
   }
   if (r.path == "/ask") {
     const auto terms = SplitTerms(r.query);

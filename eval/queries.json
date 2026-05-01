@@ -1,0 +1,102 @@
+[
+  {
+    "query": "man wakes up transformed into a giant insect",
+    "relevant": ["test_tree/books/metamorphosis.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "deception speed and tactics in ancient warfare",
+    "relevant": ["test_tree/books/artofwar.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "sailor obsessed with hunting a monstrous white whale",
+    "relevant": ["test_tree/books/mobydick.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "wrongly imprisoned man escapes and seeks revenge",
+    "relevant": ["test_tree/books/countofmontecristo.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "portrait preserves youth while the subject degrades morally",
+    "relevant": ["test_tree/books/pictureofdoriangray.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "angel rebels against heaven and is cast into darkness",
+    "relevant": ["test_tree/books/paradiselost.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "romantic tension and class differences in English countryside",
+    "relevant": ["test_tree/books/prideandprejudice.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "orphan governess with dark secrets in a mysterious mansion",
+    "relevant": ["test_tree/books/janeeyre.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "undead creature from eastern Europe drinks blood",
+    "relevant": ["test_tree/books/dracula.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "escaped convict hunted by relentless inspector across France",
+    "relevant": ["test_tree/books/lesmiserables.txt"],
+    "type": "semantic"
+  },
+  {
+    "query": "Sherlock Holmes Baker Street Watson mystery",
+    "relevant": ["test_tree/books/sherlockholmes.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Alice Wonderland rabbit hole Cheshire cat",
+    "relevant": ["test_tree/books/aliceinwonderland.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Heathcliff Catherine Earnshaw Yorkshire moors",
+    "relevant": ["test_tree/books/wutheringheights.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Huckleberry Finn rafting Mississippi raft",
+    "relevant": ["test_tree/books/huckfinn.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Tom Sawyer cave treasure fence whitewash",
+    "relevant": ["test_tree/books/tomsawyer.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Napoleon Moscow Kutuzov Natasha Bolkonsky",
+    "relevant": ["test_tree/books/warandpeace.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Leopold Bloom Molly Dublin Dedalus stream consciousness",
+    "relevant": ["test_tree/books/ulysses.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Sydney Carton Charles Darnay guillotine revolution",
+    "relevant": ["test_tree/books/taleoftwocities.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Mowgli Baloo Shere Khan wolf pack jungle",
+    "relevant": ["test_tree/books/thejunglebook.txt"],
+    "type": "keyword"
+  },
+  {
+    "query": "Socrates Plato justice soul republic city",
+    "relevant": ["test_tree/books/therepublic.txt"],
+    "type": "keyword"
+  }
+]
