@@ -10,8 +10,13 @@ Content-length: 531
 <div style="height:20px;"></div>
 <center>
 <form action="/query" method="get">
-<input type="text" size=30 name="terms" />
+<input type="text" size=30 name="terms" placeholder="Search keywords..." />
 <input type="submit" value="Search" />
+</form>
+<div style="height:12px;"></div>
+<form action="/ask" method="get">
+<input type="text" size=30 name="q" placeholder="Ask a question..." />
+<input type="submit" value="Ask AI" style="background:#4285f4;color:#fff;border:none;padding:3px 10px;cursor:pointer;" />
 </form>
 </center><p>
 </body>

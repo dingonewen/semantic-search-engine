@@ -2,7 +2,8 @@
 #include "./HttpRequest.hpp"   // ParseRequest, SplitTerms
 #include "./HttpResponse.hpp"  // MakeResponse, k_http_*
 #include "./InvertedIndex.hpp"
-#include "./StaticFile.hpp"  // serve_static, static_put, static_delete
+#include "./StaticFile.hpp"    // StaticGet, StaticPut, StaticDelete
+#include "./VectorClient.hpp"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -22,11 +23,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <shared_mutex>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 namespace {
@@ -60,7 +64,30 @@ struct ClientCtx {
   std::string files_root;
   InvertedIndex* index;          // pointer to the search index for queries
   std::shared_mutex* index_mtx;  // guards index for concurrent read/write
+  VectorClient* vec;             // embedding service client (may return empty)
 };
+
+// Reciprocal Rank Fusion: merges BM25 and semantic rankings into one list.
+// score(d) = 1/(k+rank_bm25) + 1/(k+rank_semantic), with k=60 (standard).
+auto RrfMerge(const std::vector<std::pair<std::string, int>>& bm25,
+              const std::vector<std::pair<std::string, float>>& semantic)
+    -> std::vector<std::pair<std::string, float>> {
+  constexpr float k_rrf_k = 60.0f;
+  std::unordered_map<std::string, float> scores;
+  for (size_t i = 0; i < bm25.size(); ++i) {
+    scores[bm25[i].first] +=
+        1.0f / (k_rrf_k + static_cast<float>(i) + 1.0f);
+  }
+  for (size_t i = 0; i < semantic.size(); ++i) {
+    scores[semantic[i].first] +=
+        1.0f / (k_rrf_k + static_cast<float>(i) + 1.0f);
+  }
+  std::vector<std::pair<std::string, float>> merged(scores.begin(),
+                                                     scores.end());
+  std::ranges::sort(merged,
+                    [](const auto& a, const auto& b) { return a.second > b.second; });
+  return merged;
+}
 
 /*
 HandleClient's inner logic was split into ReadHeaders, ReadBody,
@@ -142,31 +169,120 @@ auto ReadRawRequest(int fd) -> std::string {
   return raw;
 }
 
-// handles GET requests: route to home page, query results, or static file
+// Build a space-joined query string from term list.
+auto JoinTerms(const std::vector<std::string>& terms) -> std::string {
+  std::string out;
+  for (size_t i = 0; i < terms.size(); ++i) {
+    if (i > 0) {
+      out += ' ';
+    }
+    out += terms[i];
+  }
+  return out;
+}
+
+// Escape special HTML characters for safe embedding in HTML.
+auto HtmlEscape(const std::string& s) -> std::string {
+  std::string out;
+  out.reserve(s.size());
+  for (const char c : s) {
+    switch (c) {
+      case '<':
+        out += "&lt;";
+        break;
+      case '>':
+        out += "&gt;";
+        break;
+      case '&':
+        out += "&amp;";
+        break;
+      case '"':
+        out += "&quot;";
+        break;
+      default:
+        out += c;
+    }
+  }
+  return out;
+}
+
+// Format float to two decimal places as a string.
+auto Fmt2f(float v) -> std::string {
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(4) << v;
+  return oss.str();
+}
+
+// handles GET requests: route to home page, hybrid query results, or static file
 auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
   if (r.path == "/" || r.path.empty()) {
     return MakeResponse(k_http_ok, ctx->home_page, "text/html");
   }
   if (r.path == "/query") {
     auto terms = SplitTerms(r.query);
-    const std::shared_lock<std::shared_mutex> lock(*ctx->index_mtx);
-    auto results = ctx->index->SearchAndRank(terms);
-    std::string body = ctx->home_page;
+    const std::string query_str = JoinTerms(terms);
+
+    // BM25 (inverted index)
+    std::vector<std::pair<std::string, int>> bm25;
+    {
+      const std::shared_lock<std::shared_mutex> lock(*ctx->index_mtx);
+      bm25 = ctx->index->SearchAndRank(terms);
+    }
+
+    // Semantic (embedding service — empty if service is down)
+    const auto semantic = ctx->vec->Search(query_str);
+
+    // Hybrid merge via Reciprocal Rank Fusion
+    const auto results = RrfMerge(bm25, semantic);
+
     std::string links;
     for (const auto& p : results) {
-      links += "<li><a href=\"/static/" + p.first + "\">" + p.first + "</a> [" +
-               std::to_string(p.second) + "]</li>\n";
+      links += "<li><a href=\"/static/" + p.first + "\">" + p.first +
+               "</a> <span style=\"color:#888\">[hybrid: " + Fmt2f(p.second) +
+               "]</span></li>\n";
     }
-    std::string query_str;
-    for (size_t i = 0; i < terms.size(); ++i) {
-      if (i > 0) {
-        query_str += " ";
+    std::string body = ctx->home_page;
+    body += "<p>" + std::to_string(results.size()) +
+            " results found for <b>" + query_str + "</b>";
+    if (!semantic.empty()) {
+      body += " <span style=\"color:green;font-size:80%\">(semantic active)</span>";
+    }
+    body += "</p>\n<ul>\n" + links + "</ul>\n";
+    return MakeResponse(k_http_ok, body, "text/html");
+  }
+  if (r.path == "/ask") {
+    const auto terms = SplitTerms(r.query);
+    if (terms.empty()) {
+      return MakeResponse(k_http_ok, ctx->home_page, "text/html");
+    }
+    const std::string question = JoinTerms(terms);
+    auto [answer, sources] = ctx->vec->Ask(question);
+
+    std::string body = ctx->home_page;
+    body +=
+        "<div style=\"max-width:700px;margin:20px auto;background:#f8f8f8;"
+        "border:1px solid #ddd;border-radius:8px;padding:20px;\">\n"
+        "<h3 style=\"margin-top:0\">AI Answer</h3>\n";
+    if (answer.empty()) {
+      body +=
+          "<p style=\"color:#888\">Embed service unavailable or no documents "
+          "indexed. Run <code>./start.sh</code> first.</p>\n";
+    } else {
+      body += "<div style=\"white-space:pre-wrap;line-height:1.5\">" +
+              HtmlEscape(answer) + "</div>\n";
+      if (!sources.empty()) {
+        body +=
+            "<hr style=\"margin:16px 0\">"
+            "<p style=\"color:#666;font-size:85%;margin:0 0 8px\">Sources:</p>"
+            "\n<ul>\n";
+        for (const auto& src : sources) {
+          body += "<li><a href=\"/static/" + src + "\">" + HtmlEscape(src) +
+                  "</a></li>\n";
+        }
+        body += "</ul>\n";
       }
-      query_str += terms[i];
     }
-    body += "<p>" + std::to_string(results.size()) + " results found for <b>" +
-            query_str + "</b></p>\n";
-    body += "<ul>\n" + links + "</ul>\n";
+    body += "<p><a href=\"/\">&larr; Back</a></p>\n</div>\n";
     return MakeResponse(k_http_ok, body, "text/html");
   }
   if (r.path.starts_with("/static/")) {
@@ -183,8 +299,11 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
     const auto resp =
         StaticPut(ctx->files_root, rel, r.body, true);  // PUT has body
     if (resp.find("HTTP/1.1 2") != std::string::npos) {
-      const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
-      ctx->index->AddFile(rel);  // update search index on success
+      {
+        const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
+        ctx->index->AddFile(rel);
+      }
+      ctx->vec->AddDoc(rel, r.body);  // update vector index
     }
     return resp;
   }
@@ -192,16 +311,22 @@ auto HandleStaticMutation(const Request& r, ClientCtx* ctx) -> std::string {
     const auto resp =
         StaticPut(ctx->files_root, rel, r.body, false);  // POST has body
     if (resp.find("HTTP/1.1 2") != std::string::npos) {
-      const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
-      ctx->index->AddFile(rel);  // update search index on success
+      {
+        const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
+        ctx->index->AddFile(rel);
+      }
+      ctx->vec->AddDoc(rel, r.body);  // update vector index
     }
     return resp;
   }
   if (r.method == "DELETE") {
     const auto resp = StaticDelete(ctx->files_root, rel);
     if (resp.find("HTTP/1.1 2") != std::string::npos) {
-      const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
-      ctx->index->RemoveFile(rel);  // update search index on success
+      {
+        const std::unique_lock<std::shared_mutex> lock(*ctx->index_mtx);
+        ctx->index->RemoveFile(rel);
+      }
+      ctx->vec->RemoveDoc(rel);  // update vector index
     }
     return resp;
   }
@@ -277,9 +402,9 @@ HttpServer::HttpServer(int port, std::string files_root, size_t num_threads)
     : m_port(port),
       m_files_root(std::move(files_root)),
       m_index(),
+      m_vec(),
       m_pool(num_threads) {
-  m_index.Build(m_files_root);  // m_index is a search index maps words to the
-                                // files that contain them
+  m_index.Build(m_files_root);
 }
 
 /*
@@ -392,7 +517,8 @@ auto HttpServer::Run(const std::string& initial_response_path) -> int {
                               .home_page = home_page,
                               .files_root = m_files_root,
                               .index = &m_index,
-                              .index_mtx = &m_index_mtx};
+                              .index_mtx = &m_index_mtx,
+                              .vec = &m_vec};
     m_pool.Dispatch({.func = HandleClient, .arg = ctx});
   }
   // only close if signal handler hasn't already closed it

@@ -7,6 +7,7 @@
 
 #include "InvertedIndex.hpp"
 #include "ThreadPool.hpp"
+#include "VectorClient.hpp"
 
 namespace searchserver {
 
@@ -38,6 +39,7 @@ class HttpServer {
   std::string m_files_root;
   InvertedIndex m_index;          // Full-text index built from m_files_root
   std::shared_mutex m_index_mtx;  // guards m_index for concurrent read/write
+  VectorClient m_vec;             // HTTP client for the embedding microservice
   ThreadPool
       m_pool;  // declared last: destroyed first, joining threads before m_index
 };

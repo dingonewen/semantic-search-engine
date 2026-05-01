@@ -7,14 +7,14 @@ CXXFLAGS += -g3 -gdwarf-4 -Wall -Wpedantic -Wextra -std=c++2b
 
 TESTOBJS = test_threadpool.o test_invertedindex.o test_httprequest.o test_httpresponse.o test_staticfile.o test_suite.o catch.o 
 
-CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp InvertedIndex.cpp StaticFile.cpp
-HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp InvertedIndex.hpp StaticFile.hpp
+CPP_SOURCE_FILES = ThreadPool.cpp HttpServer.cpp HttpRequest.cpp HttpResponse.cpp InvertedIndex.cpp StaticFile.cpp VectorClient.cpp
+HPP_SOURCE_FILES = ThreadPool.hpp HttpServer.hpp HttpRequest.hpp HttpResponse.hpp InvertedIndex.hpp StaticFile.hpp VectorClient.hpp
 
 
 all: test_suite searchserver searchclient
 
 # build a minimal searchserver binary for the assignment demo
-SRV_OBJS = searchserver.o HttpServer.o HttpRequest.o HttpResponse.o StaticFile.o InvertedIndex.o ThreadPool.o
+SRV_OBJS = searchserver.o HttpServer.o HttpRequest.o HttpResponse.o StaticFile.o InvertedIndex.o ThreadPool.o VectorClient.o
 
 searchserver: $(SRV_OBJS)
 	$(CXX) $(CXXFLAGS) -o searchserver $(SRV_OBJS)
@@ -36,6 +36,9 @@ StaticFile.o: StaticFile.cpp StaticFile.hpp HttpResponse.hpp
 
 InvertedIndex.o: InvertedIndex.cpp InvertedIndex.hpp
 	$(CXX) $(CXXFLAGS) -c InvertedIndex.cpp
+
+VectorClient.o: VectorClient.cpp VectorClient.hpp
+	$(CXX) $(CXXFLAGS) -c VectorClient.cpp
 
 # searchclient
 searchclient: searchclient.o
