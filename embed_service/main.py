@@ -13,6 +13,10 @@ from __future__ import annotations
 
 import os
 import threading
+
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
 from contextlib import asynccontextmanager
 
 import faiss
@@ -214,14 +218,15 @@ _SYSTEM_PROMPT = (
 def _llm_answer(question: str, context: str) -> str:
     """Call the configured LLM provider and return the answer text."""
     if LLM_PROVIDER == "gemini":
-        import google.generativeai as genai
-        genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-        model = genai.GenerativeModel(
-            "gemini-2.0-flash", system_instruction=_SYSTEM_PROMPT
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=f"Documents:\n\n{context}\n\nQuestion: {question}",
+            config=types.GenerateContentConfig(system_instruction=_SYSTEM_PROMPT),
         )
-        return model.generate_content(
-            f"Documents:\n\n{context}\n\nQuestion: {question}"
-        ).text
+        return response.text
     else:
         import anthropic
         client = anthropic.Anthropic()
