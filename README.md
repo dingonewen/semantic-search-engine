@@ -1,8 +1,33 @@
-# Dingle — Personal Semantic Search Engine
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:282c34,100:61afef&height=220&section=header&text=Dingle&fontSize=80&fontColor=abb2bf&animation=fadeIn&fontAlignY=40" />
+</div>
 
-A full-stack AI search engine built from scratch: a **C++ HTTP server** with a BM25 inverted index fused with a **Python semantic search microservice** (FAISS + sentence-transformers), topped with a **RAG Q&A layer** powered by Claude or Gemini.
+<p align="center">
+  <strong>"Your documents. Your knowledge. Search it like a brain."</strong>
+</p>
 
-Designed as a personal knowledge base — index your own documents and query them in natural language.
+<p align="center">
+  <img src="https://img.shields.io/badge/C%2B%2B23-HTTP%20Server-e06c75?style=for-the-badge&logo=cplusplus&logoColor=white" alt="C++23"/>
+  <img src="https://img.shields.io/badge/FAISS-Vector%20Search-61afef?style=for-the-badge&logo=meta&logoColor=white" alt="FAISS"/>
+  <img src="https://img.shields.io/badge/Anthropic%20Claude-RAG-c678dd?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude"/>
+  <img src="https://img.shields.io/badge/FastAPI-Python-98c379?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
+</p>
+
+<p align="center">
+  <em>A full-stack AI search engine built from scratch — BM25 keyword search fused with semantic vector search, topped with a RAG Q&A layer. Index your own documents and query them in natural language.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/BM25-Keyword%20Search-e5c07b?style=for-the-badge" alt="BM25"/>
+  <img src="https://img.shields.io/badge/RRF-Hybrid%20Ranking-56b6c2?style=for-the-badge" alt="RRF"/>
+  <img src="https://img.shields.io/badge/sentence--transformers-Embeddings-d19a66?style=for-the-badge" alt="sentence-transformers"/>
+</p>
+
+<p align="center">
+  <img src="assets/Screenshot 2026-05-02 122125.png" alt="Dingle UI Screenshot" width="800"/>
+</p>
+
+---
 
 ---
 
