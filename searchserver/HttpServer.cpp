@@ -264,36 +264,7 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
     return MakeResponse(k_http_ok, ctx->home_page, "text/html");
   }
   if (r.path == "/query") {
-    auto terms = SplitTerms(r.query);
-    const std::string query_str = JoinTerms(terms);
-
-    // BM25 (inverted index)
-    std::vector<std::pair<std::string, int>> bm25;
-    {
-      const std::shared_lock<std::shared_mutex> lock(*ctx->index_mtx);
-      bm25 = ctx->index->SearchAndRank(terms);
-    }
-
-    // Semantic (embedding service — empty if service is down)
-    const auto semantic = ctx->vec->Search(query_str);
-
-    // Hybrid merge via Reciprocal Rank Fusion
-    const auto results = RrfMerge(bm25, semantic);
-
-    std::string links;
-    for (const auto& p : results) {
-      links += "<li><a href=\"/static/" + p.first + "\">" + p.first +
-               "</a> <span style=\"color:#888\">[hybrid: " + Fmt2f(p.second) +
-               "]</span></li>\n";
-    }
-    std::string body = ctx->home_page;
-    body += "<p>" + std::to_string(results.size()) +
-            " results found for <b>" + query_str + "</b>";
-    if (!semantic.empty()) {
-      body += " <span style=\"color:green;font-size:80%\">(semantic active)</span>";
-    }
-    body += "</p>\n<ul>\n" + links + "</ul>\n";
-    return MakeResponse(k_http_ok, body, "text/html");
+    return MakeResponse(k_http_ok, ctx->home_page, "text/html");
   }
   if (r.path == "/api/search") {
     const auto terms = SplitTerms(r.query);
@@ -318,40 +289,24 @@ auto HandleGetRequest(const Request& r, ClientCtx* ctx) -> std::string {
         "\"hybrid\":" + RankedToJson(hybrid) + "}";
     return MakeResponse(k_http_ok, json, "application/json");
   }
-  if (r.path == "/ask") {
+  if (r.path == "/api/ask") {
     const auto terms = SplitTerms(r.query);
     if (terms.empty()) {
-      return MakeResponse(k_http_ok, ctx->home_page, "text/html");
+      return MakeResponse(k_http_ok, "{\"error\":\"empty query\"}",
+                          "application/json");
     }
     const std::string question = JoinTerms(terms);
     auto [answer, sources] = ctx->vec->Ask(question);
-
-    std::string body = ctx->home_page;
-    body +=
-        "<div style=\"max-width:700px;margin:20px auto;background:#f8f8f8;"
-        "border:1px solid #ddd;border-radius:8px;padding:20px;\">\n"
-        "<h3 style=\"margin-top:0\">AI Answer</h3>\n";
-    if (answer.empty()) {
-      body +=
-          "<p style=\"color:#888\">Embed service unavailable or no documents "
-          "indexed. Run <code>./start.sh</code> first.</p>\n";
-    } else {
-      body += "<div style=\"white-space:pre-wrap;line-height:1.5\">" +
-              HtmlEscape(answer) + "</div>\n";
-      if (!sources.empty()) {
-        body +=
-            "<hr style=\"margin:16px 0\">"
-            "<p style=\"color:#666;font-size:85%;margin:0 0 8px\">Sources:</p>"
-            "\n<ul>\n";
-        for (const auto& src : sources) {
-          body += "<li><a href=\"/static/" + src + "\">" + HtmlEscape(src) +
-                  "</a></li>\n";
-        }
-        body += "</ul>\n";
-      }
+    std::string json = "{\"answer\":\"" + JsonStr(answer) + "\",\"sources\":[";
+    for (size_t i = 0; i < sources.size(); ++i) {
+      if (i > 0) { json += ','; }
+      json += "\"" + JsonStr(sources[i]) + "\"";
     }
-    body += "<p><a href=\"/\">&larr; Back</a></p>\n</div>\n";
-    return MakeResponse(k_http_ok, body, "text/html");
+    json += "]}";
+    return MakeResponse(k_http_ok, json, "application/json");
+  }
+  if (r.path == "/ask") {
+    return MakeResponse(k_http_ok, ctx->home_page, "text/html");
   }
   if (r.path.starts_with("/static/")) {
     const std::string rel = r.path.substr(8);
