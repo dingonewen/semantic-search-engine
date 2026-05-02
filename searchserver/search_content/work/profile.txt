@@ -1,0 +1,266 @@
+ 
+
+Contact 
+6073791110 (Mobile) 
+yd239@cornell.edu
+www.linkedin.com/in/dingyiwen 
+(LinkedIn)
+dingonewen.github.io (Portfolio)
+Top Skills
+Operations Management 
+Medical Imaging (DICOM/NIfTI) 
+Three.js
+Languages
+Mandarin (Native or Bilingual) 
+English (Full Professional)
+Certifications
+Full Course on RCR for Biomedical 
+Sciences
+Introduction to Structured Query 
+Language (SQL)
+GCP – Social and Behavioral 
+Research Best Practices for Clinical 
+Research
+Preventive Controls for Human Food 
+HACCP and GMP Certificate
+Honors-Awards
+CALS Honor Society
+Dean's List every semester
+USDA Scholarship for Sustainable 
+Agriculture and Food Systems
+Top 1% in college
+Magna Cum Laude
+Publications
+Division of labor in honey bee gut 
+microbiota for plant polysaccharide 
+digestion
+Bioavailability of Docosahexaenoic 
+Acid from Biofortified Chicken
+Why bioenhanced foods: role of 
+food-based supplementation of
+
+Yiwen Ding
+TPM & SDE Candidate | CS @ UPenn | Ex-PM 
+Philadelphia, Pennsylvania, United States
+Summary
+UPenn MAS-CS (formerly MCIT) candidate. Active H-1B visa. 
+Seeking Summer 2026 internship roles to drive impact through 
+technical trade-off analysis and strategic roadmap execution. Open 
+to discussing roles in AI Agent, Product Operations, Strategy, and 
+TPM across innovative tech organizations. PM Expert in Agentic 
+Workflows and Pharma/Healthcare compliance. Let’s connect!
+
+Experience
+FIFA World Cup 2026™ - Canada, Mexico and the United States 
+Tournament Operations Support
+April 2026 - Present (2 months)
+Philadelphia, PA
+Supporting the Tournament Operations for the FIFA World Cup 2026 in 
+Philadelphia this May. Working within the Accreditation branch, helping 
+manage access protocols and identity verification for the thousands of 
+stakeholders that make an event of this scale possible.
+Penn Engineering
+Graduate Student
+August 2025 - Present (10 months)
+Philadelphia, Pennsylvania, United States
+Master's student at Penn Engineering, specializing in the field of Computer and 
+Information Technology, pivoting from biotechnology.
+• Agile Innovation & Prototyping: Proactively identify emerging industry trends 
+and pain points to drive rapid prototype development; collaborate with cross-
+functional teams in high-stakes hackathons—such as the Google Gemini AI 
+Studio Hackathon—to engineer scalable, AI-driven solutions.
+• Daily Practice: Regularly engage in competitive programming (LeetCode) and 
+solve complex coding challenges to sharpen problem-solving and algorithmic 
+skills.
+• Professional Development: Actively participate in local networking events to 
+connect with industry professionals, gain insights into emerging technologies, 
+and explore career opportunities.
+ Page 1 of 6
+
+
+ 
+
+bioactive micronutrients in public 
+nutrition and health
+Diversity and functional analysis of 
+Chinese bumblebee gut microbiota 
+reveal the metabolic niche and 
+antibiotic resistance variation of 
+Gilliamella
+
+• Personal Discipline: Maintain a disciplined routine by incorporating regular 
+swimming (2,000m) to enhance focus, reduce stress, and sustain a balanced 
+lifestyle.
+• Active Community Volunteer: View service as an essential practice for 
+personal resilience and maintaining a long-term commitment to social impact.
+Amerigo Scientific
+Project Manager
+June 2023 - May 2025 (2 years)
+New York City Metropolitan Area
+• Managed cross-functional project lifecycles, aligning technical roadmaps with 
+business KPIs and facilitating regular syncs between engineering and sales 
+teams to drive 100% operational alignment
+• Spearheaded strategic partnership negotiations with 100+ global entities 
+across North America, Europe, and Asia, directly securing 85% of the total 
+annual sales revenue
+• Architected and deployed agentic workflows for marketing automation using 
+JavaScript and Python; leveraged data analytics to optimize sales funnels and 
+significantly accelerate pipeline velocity
+• Served as a domain expert at major U.S. pharma and biotech conferences, 
+translating industry trends into actionable product strategies and leading global 
+staff training programs to adapt to market developments
+Cornell University
+Clinical Research Coordinator
+December 2022 - July 2023 (8 months)
+Ithaca, New York, United States
+• Managed end-to-end clinical study lifecycles, transitioning from an onsite 
+internship to a remote coordinator role to provide continuous technical and 
+operational support for longitudinal research
+• Governed human subject recruitment and retention workflows, ensuring
+100% compliance with stringent IRB protocols and federal regulatory 
+requirements for clinical data integrity
+• Optimized program operations by developing Standard Operating Procedures 
+(SOPs) and managing IRB submissions, streamlining coordination between 
+participants, medical staff, and regulatory bodies
+• Executed data-driven research analysis using Python, R, and JMP to process 
+complex dietary datasets, translating raw clinical data into validated outcomes 
+for peer-reviewed studies
+
+ Page 2 of 6
+
+
+ 
+
+• Directed laboratory operations and biospecimen quality control (QC), serving 
+as the primary technical liaison between the Principal Investigator (PI) and 
+cross-functional study teams to ensure operational excellence
+Eurofins Lancaster Laboratories
+Associate Scientist
+August 2022 - December 2022 (5 months)
+Lancaster, Pennsylvania, United States
+• Managed technical data integrity through Laboratory Information 
+Management Systems (LIMS) and Electronic Laboratory Notebooks (ELN), 
+ensuring 100% adherence to Standard Operating Procedures (SOPs) for 
+complex analytical workflows
+• Executed technical assay development and client testing within a high-stakes 
+BSL-2 environment, strictly governing processes under cGMP, GLP, and USP 
+regulatory frameworks to mitigate operational and safety risks
+• Maintained technical infrastructure and quality control for high-precision 
+analytical instruments (HPLC, CE, UV-Vis, etc.), implementing rigorous 
+calibration and maintenance schedules to ensure data reliability for critical 
+R&D projects
+• Facilitated strategic technical reporting to senior management, translating 
+complex assay development milestones and sample analysis results
+into business-aligned progress updates to ensure project delivery met 
+departmental goals
+Cornell University - College of Human Ecology
+Research Intern
+June 2022 - August 2022 (3 months)
+Ithaca, New York, United States
+• Awarded a competitive USDA scholarship to participate in the Empowering 
+U.S. Broiler Production for Transformation and Sustainability program
+• Conducted comprehensive fatty acid analysis in human studies using JMP 
+and Excel, achieving strong proficiency in advanced data interpretation
+• Gained hands-on experience with mass spectrometry and ELISA, ensuring 
+precise and reliable experimental measurements
+• Supported a clinical trial on DHA biofortified chicken, presenting findings 
+through a client-facing presentation and poster session on Bioavailability of 
+DHA From Biofortified Chicken
+Cornell SC Johnson College of Business 
+6 months
+ Page 3 of 6
+
+
+ 
+
+Data Analyst Intern
+December 2021 - January 2022 (2 months)
+Ithaca, New York, United States
+• Applied advanced spreadsheet modeling to analyze 10+ years of 
+International Ski Federation data, assessing performance trends and 
+quantifying the impact of the green line rule
+• Coordinated project activities and produced data-driven progress reports for 
+management and investors to guide strategic decisions
+• Leveraged quantitative analysis and structured reporting to support client 
+negotiations and strengthen project outcomes
+Teaching Assistant
+August 2021 - December 2021 (5 months) 
+Ithaca, New York, United States
+TA in AEM 2400: Marketing
+EasyTransfer
+Campus Marketing Coordinator
+March 2021 - January 2022 (11 months)
+Beijing, China
+• Directed human resources deployment and coordinated work assignments to 
+ensure efficient operations within EasyTransfer’s Cornell region
+• Leveraged WeChat and social media platforms to engage with international 
+students, driving customer outreach and brand visibility
+• Conducted background research and executed regional product promotion 
+strategies that enhanced customer acquisition
+• Led and mentored a 5-member marketing team, contributing to the expansion 
+of EasyTransfer’s business presence across the Eastern U.S.
+Cornell Dyson School of Applied Economics & Management 
+Research Assistant
+October 2020 - January 2022 (1 year 4 months)
+Ithaca, New York, United States
+• Utilized advanced spreadsheet modeling to structure and categorize the 
+USDA food composition database, enabling large-scale nutritional analysis
+• Developed and implemented a data matching algorithm to ensure accurate 
+comparisons of food items and nutrient values across datasets
+• Conducted quantitative analysis on the impact of diet structure on weight loss 
+using the LoseIt platform, delivering precise and data-driven insights
+China Everbright Bank
+ Page 4 of 6
+
+
+ 
+
+Business Development Specialist
+March 2021 - September 2021 (7 months)
+Beijing, China
+Collaborated with EasyTransfer as a sales specialist to promote China 
+Everbright Bank Evoke credit card business development.
+China Agricultural University
+2 years 7 months
+Teaching Assistant
+September 2020 - June 2021 (10 months)
+Beijing, China
+TA in Molecular & Cell Biology.
+Research Assistant
+December 2018 - June 2021 (2 years 7 months)
+Beijing, China
+• Conducted in vivo experiments using bees as model organisms, including 
+gut-specific strain cultivation, isolation, and microbiota transplantation
+• Investigated the relationships among gut microbiota, host behavior, 
+metabolism, and immune system function through controlled experimental 
+studies
+• Applied a wide range of molecular biology techniques such as PCR, qPCR, 
+DNA/RNA extraction, protein purification, gel electrophoresis, western blotting, 
+and bacterial isolation/colonization
+• Gained proficiency in advanced lab practices including cell culture, model 
+animal breeding/dissection, behavioral assays, and sequencing analysis with 
+BLAST
+Food Production Intern
+June 2020 - August 2020 (3 months) 
+Beijing, China
+Metalworking Intern
+June 2019 - September 2019 (4 months) 
+Beijing, China
+
+Education
+University of Pennsylvania
+Master's Degree, Computer Science · (August 2025 - May 2027)
+
+ Page 5 of 6
+
+
+ 
+
+Cornell University
+Bachelor's degree, Food Science · (August 2020 - May 2022)
+China Agricultural University
+Bachelor's degree, Food Science & Engineering · (August 2018 - July 2020)
+Zhengzhou Foreign Language School 
+High School Diploma  · (2015 - 2018)
+
+ Page 6 of 6

@@ -28,7 +28,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Starting embed service on port $EMBED_PORT..."
-SEARCH_ROOT=test_tree python3 -m uvicorn embed_service.main:app \
+SEARCH_ROOT=search_content python3 -m uvicorn embed_service.main:app \
     --app-dir .. --port "$EMBED_PORT" --host 127.0.0.1 2>&1 | \
     sed 's/^/[embed] /' &
 EMBED_PID=$!
@@ -49,4 +49,4 @@ done
 
 echo "==> Starting search server on port $PORT..."
 echo "==> Open http://localhost:$PORT in your browser"
-./searchserver "$PORT" test_tree
+./searchserver "$PORT" search_content

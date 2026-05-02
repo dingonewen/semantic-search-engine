@@ -1,0 +1,57 @@
+Yiwen Ding
+
+Philadelphia, PA | dingywn@seas.upenn.edu | 607-379-1110 | LinkedIn: dingyiwen 
+Internship Available: Summer 2026 | Graduation: Spring 2027
+Work Authorization: CPT | STEM OPT | active H-1B visa (5+ yrs remaining)
+
+Technical Skills
+• Technical Program Management: Agile (Scrum), Waterfall; Roadmap planning, Risk mitigation, Prioritization frameworks,
+Technical trade-off analysis, Cross-functional leadership, Complex stakeholder management.
+• Software & Systems Engineering: Java, C++, Python (Proficient); SQL, TypeScript, Node.js, React, FastAPI (JWT Auth),
+PostgreSQL (Supabase); System Design, Vercel & Railway, Git/Docker, CI/CD (GitHub Actions), REST APIs, JUnit.
+• AI, Graphics & Data Science: Generative AI (Gemini, Veo), Prompt Engineering; Agentic workflow design (planning &
+reflection), LLM integration; Three.js & WebGL, Statistical modeling (Stata, R, JMP), Data-driven decision making.
+• Compliance, Design & Strategy: FDA Regulations, GCP, GLP, GMP, HACCP, SQF; IRB protocols, Quality Management Systems;
+Partnership negotiation (200+ global agreements), Medical Imaging, SolidWorks, AutoCAD, SMB & e-commerce management.
+Education
+University of Pennsylvania, Master of Applied Science in Computer Science Aug 2025 – May 2027 
+• Relevant Coursework: Comp. Systems, Software Eng., DS & Algos | Cum GPA: 4.0
+Cornell University, BS in Food Science, minor in Business | Major GPA: 3.9, minor GPA: 4.0 Aug 2020 – May 2022 
+• Relevant Coursework: Interdisciplinary Core: Full suite of Life Science & Engineering prerequisites
+China Agricultural University, BEng in Food Science & Engineering (dual degree program) Aug 2018 – Jul 2020
+Experience
+Project Manager, Amerigo Scientific – Hauppauge, NY June 2023 – May 2025
+• Directed program operations and led cross-functional teams (Sales, Marketing, Engineering) to drive growth; prioritized
+high-impact initiatives by balancing operational efficiency with commercial velocity
+• Negotiated 100+ global agreements and managed complex stakeholder relationships; prioritized strategic partnerships based
+on resource constraints, contributing to 85% of total company sales revenue
+• Implemented an LLM-integrated marketing automation pipeline to scale outreach; managed technical trade-offs between
+content personalization and generation latency while utilizing Python for lead optimization
+• Aligned technical roadmaps with business KPIs by managing cross-functional dependencies and facilitating syncs between
+engineering and sales; translated market trends into actionable technical requirements
+Clinical Research Coordinator, Cornell University – Hybrid, Part-time Dec 2022 – Jun 2023
+• Managed recruitment and screening for multiple concurrent study pipelines, processing 200 participants per quarter while
+ensuring 100% adherence to distinct, protocol-specific eligibility criteria
+• Directed complex visit logistics and laboratory scheduling; optimized facility utilization by resolving resource overlaps in strict
+accordance with IRB protocols and GLP standards
+• Streamlined cross-functional communication and executed statistical data modeling via Python and R to validate findings for
+peer-reviewed publications and technical presentations
+Associate Scientist, Eurofins Lancaster Laboratories – Lancaster, PA Aug 2022 – Dec 2022
+• Performed client sample testing in BSL-2 per cGMP/GLP/USP; collaborated with PM to ensure on-time delivery
+Additional Internship & Research – Cornell· China Everbright Bank · EasyTransfer · Lose It! App 2019 – 2022 
+• Led market expansion at fintech startup, coordinating 5-member team and driving 35% regional performance increase through
+process optimization across U.S. East Coast markets
+• Conducted data analysis on the USDA food database via spreadsheets for the Lose It! app, establishing the data foundation for
+user nutritional goal tracking and weight management
+• Executed rigorous wet-lab protocols and leveraged R and BLAST for meta-analysis supporting research in Bumblebee Gut
+Microbiota Analysis (Zhang et al., Feb 2020)
+Projects
+Oystraz | GitHub · Demo | Vercel & Railway · React 19 · FastAPI · PostgreSQL · Gemini 2.0 · Zustand Feb 2026 
+• Architected a gamified health ecosystem using React 19 and FastAPI, featuring a state-driven simulation engine that
+synchronizes real-world biometric data from the USDA API with virtual character attributes; integrated Gemini 2.0 Flash and 
+Veo 3.1 with AI personality constraints to deliver context-aware coaching and generative video rewards secured via JWT 
+authentication.
+Branch Barber | GitHub · Chrome Web Store | React Flow · Transformers.js · IndexedDB Apr 2026 
+• Developed a Chrome Extension (MV3) transforming linear AI chat logs into interactive conversation trees via a Shadow DOM
+host and MutationObserver; engineered a two-layer drift detection engine using lexical TF-IDF and WASM-powered 
+semantic embeddings supported by a non-blocking pipeline with Zustand and Dexie.js for local persistence.
