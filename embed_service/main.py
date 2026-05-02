@@ -27,7 +27,7 @@ from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 EMBED_DIM = 384  # all-MiniLM-L6-v2 output dimension
-SEARCH_ROOT = os.environ.get("SEARCH_ROOT", "test_tree")
+SEARCH_ROOT = os.environ.get("SEARCH_ROOT", "search_content")
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "claude")  # "claude" or "gemini"
 TEXT_LIMIT = 2048  # chars per document sent to the encoder
 INDEX_BIN = "embed_index.bin"    # persisted FAISS index (CWD-relative)
@@ -159,7 +159,7 @@ def search(req: SearchReq) -> str:
 
     lines: list[str] = []
     for score, idx in zip(scores[0], idxs[0]):
-        if 0 <= idx < len(_ids):
+        if 0 <= idx < len(_ids) and float(score) >= 0.3:
             lines.append(f"{_ids[idx]}\t{float(score):.6f}")
     return "\n".join(lines)
 
