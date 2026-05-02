@@ -1,62 +1,99 @@
-# Semantic Search Engine
+# Dingle — Personal Semantic Search Engine
 
-A hybrid full-text + semantic search engine built from scratch in C++ and Python, with a RAG-powered Q&A layer backed by Claude or Gemini.
+A full-stack AI search engine built from scratch: a **C++ HTTP server** with a BM25 inverted index fused with a **Python semantic search microservice** (FAISS + sentence-transformers), topped with a **RAG Q&A layer** powered by Claude or Gemini.
 
-## Overview
+Designed as a personal knowledge base — index your own documents and query them in natural language.
 
-The system combines two complementary retrieval techniques:
+---
 
-- **BM25 keyword search** — a C++ inverted index ranks documents by term frequency, giving exact-match precision
-- **Semantic search** — a Python microservice embeds queries and documents using `all-MiniLM-L6-v2` (384-dim), then retrieves by cosine similarity via FAISS
-- **Hybrid ranking** — Reciprocal Rank Fusion (RRF, k=60) merges both result lists into a single ranked output that outperforms either method alone
+## Tech Stack
 
-On top of retrieval, a RAG Q&A endpoint passes the top-k results to an LLM (Claude Haiku or Gemini 2.0 Flash) and returns a grounded answer with source citations.
+| Layer | Technology |
+|---|---|
+| HTTP Server | C++23, POSIX raw sockets, custom thread pool |
+| Keyword Search | BM25 inverted index (built from scratch in C++) |
+| Semantic Search | `all-MiniLM-L6-v2` (384-dim) + FAISS `IndexFlatIP` |
+| Hybrid Ranking | Reciprocal Rank Fusion (RRF, k=60) |
+| RAG / LLM | Anthropic Claude Haiku · Google Gemini 2.0 Flash |
+| Embed Service | Python · FastAPI · sentence-transformers |
+| UI | Vanilla JS SPA · Atom One Dark · Fontdiner Swanky · Space Grotesk |
+| Config | `python-dotenv` · environment variables |
+
+---
 
 ## Architecture
 
 ```
-Browser / eval script
-        │
-        ▼
-┌─────────────────────────────────┐
-│  C++ HTTP Server  (port 8080)   │
-│  - POSIX raw sockets            │
-│  - Thread pool (N workers)      │
-│  - Inverted index  (BM25)       │
-│  - VectorClient  (HTTP client)  │
-└────────────┬────────────────────┘
-             │ HTTP (localhost:8001)
-             ▼
-┌─────────────────────────────────┐
-│  Python Embed Service (FastAPI) │
-│  - sentence-transformers        │
-│  - FAISS IndexFlatIP            │
-│  - Claude / Gemini  (RAG /ask)  │
-└─────────────────────────────────┘
+Browser
+   │
+   ▼
+┌──────────────────────────────────────┐
+│   C++ HTTP Server  (port 8080)       │
+│                                      │
+│   ┌─────────────┐  ┌──────────────┐  │
+│   │ BM25 Index  │  │ VectorClient │  │
+│   │ (InvertedIn │  │ (HTTP to     │  │
+│   │  vertedIndex│  │  port 8001)  │  │
+│   └──────┬──────┘  └──────┬───────┘  │
+│          └────────┬────────┘          │
+│              RRF Merge                │
+│         /api/search  /api/ask         │
+└──────────────────────────────────────┘
+                    │ localhost:8001
+                    ▼
+┌──────────────────────────────────────┐
+│   Python Embed Service  (FastAPI)    │
+│                                      │
+│   sentence-transformers (384-dim)    │
+│   FAISS IndexFlatIP                  │
+│   Claude Haiku / Gemini 2.0 Flash    │
+└──────────────────────────────────────┘
 ```
 
-## Features
+---
 
-### Hybrid Search (BM25 + Semantic)
-Queries hit both the inverted index and the FAISS vector index. Results are merged with Reciprocal Rank Fusion:
+## How It Works
+
+### 1. Hybrid Search (BM25 + Semantic)
+
+Every query runs through **two independent retrieval pipelines in parallel**:
+
+- **BM25** — the C++ inverted index scores documents by term frequency and inverse document frequency, giving strong exact-match precision
+- **Semantic** — the Python service encodes the query into a 384-dim vector and retrieves nearest neighbors from the FAISS index by cosine similarity
+
+Results are merged with **Reciprocal Rank Fusion**:
 
 ```
-score(doc) = 1/(60 + rank_bm25) + 1/(60 + rank_semantic)
+score(doc) = 1 / (60 + rank_bm25) + 1 / (60 + rank_semantic)
 ```
 
-Documents that rank well in both lists get boosted; documents in only one list still receive a partial score.
+Documents that rank well in both lists get boosted. Documents that appear in only one list still receive a partial score. This consistently outperforms either method alone.
 
-### FAISS Index Persistence
-On first startup the embed service walks `SEARCH_ROOT`, embeds all files in batches, and saves `embed_index.bin` + `embed_ids.json` to disk. Subsequent restarts load from cache in milliseconds instead of re-embedding.
+A **cosine similarity threshold** (≥ 0.3) filters out semantically irrelevant documents before RRF, preventing noise from polluting the hybrid ranking.
 
-### Live Index Updates
-`PUT /static/<path>`, `POST /static/<path>`, and `DELETE /static/<path>` update both the BM25 inverted index and the FAISS vector index atomically in the same request.
+### 2. RAG Q&A Pipeline
 
-### RAG Q&A
-`GET /ask?q=<question>` retrieves the top-5 semantically relevant documents, passes their content to an LLM, and renders a grounded answer with clickable source links. Two providers are supported and switchable via an environment variable.
+`/api/ask` retrieves the top-k semantically relevant documents, assembles them as context, and calls an LLM to synthesize a grounded answer with source citations. The system prompt is cached with Anthropic's prompt caching to reduce latency and cost on repeated calls.
 
-### Evaluation Harness
-`eval/run_eval.py` benchmarks BM25, semantic, and hybrid search against 20 labeled queries (10 conceptual/semantic, 10 keyword-exact). Reports MRR@10, Hits@1, and Hits@5 per method with a per-query-type breakdown to show where each method wins.
+### 3. FAISS Index Persistence
+
+On first startup, the embed service walks `SEARCH_ROOT`, embeds all documents in batches, and persists `embed_index.bin` + `embed_ids.json` to disk. Subsequent restarts load from cache in milliseconds.
+
+### 4. Live Index Updates
+
+`PUT`, `POST`, and `DELETE` on `/static/<path>` update both the BM25 inverted index and the FAISS vector index atomically in a single request — no restart required.
+
+---
+
+## UI — Dingle
+
+A single-page app with no framework dependencies.
+
+- **Evidence column** — search results as ranked cards (filename, relevance bar, text snippet). Click any card to open the source document.
+- **Synthesis column** — the LLM's RAG answer with cited sources, streamed after "Ask My Brain" is submitted.
+- Submitting a new search clears the synthesis panel automatically.
+
+---
 
 ## Quick Start
 
@@ -64,82 +101,99 @@ On first startup the embed service walks `SEARCH_ROOT`, embeds all files in batc
 # 1. Install Python dependencies
 pip install -r embed_service/requirements.txt
 
-# 2. Set your LLM API key
-export ANTHROPIC_API_KEY=sk-ant-...   # for Claude (default)
-# or
-export GOOGLE_API_KEY=AI...           # for Gemini
+# 2. Configure API keys
+cp .env.example .env
+# Edit .env and set ANTHROPIC_API_KEY (default) or GOOGLE_API_KEY
 
-# 3. Build and run everything
+# 3. Add your documents
+mkdir -p search_content
+# Copy your .txt files into search_content/ (subdirectories supported)
+
+# 4. Build and launch
 cd searchserver
-./start.sh          # builds C++ server, starts embed service, opens on :8080
+./start.sh
 ```
 
-Open [http://localhost:8080](http://localhost:8080) in your browser. Use the top form to search, the bottom form to ask a question.
+Open [http://localhost:8080](http://localhost:8080).
+
+The first launch embeds all documents and saves the index to disk. Subsequent starts are instant.
+
+---
 
 ## Configuration
 
-| Environment variable | Default | Description |
+Copy `.env.example` to `.env` and fill in your keys. Never commit `.env`.
+
+| Variable | Default | Description |
 |---|---|---|
-| `PORT` | `8080` | C++ server port (first arg to `./start.sh`) |
-| `SEARCH_ROOT` | `test_tree` | Directory to index |
-| `LLM_PROVIDER` | `claude` | LLM for RAG: `claude` or `gemini` |
 | `ANTHROPIC_API_KEY` | — | Required when `LLM_PROVIDER=claude` |
 | `GOOGLE_API_KEY` | — | Required when `LLM_PROVIDER=gemini` |
+| `LLM_PROVIDER` | `claude` | `claude` or `gemini` |
+| `SEARCH_ROOT` | `search_content` | Directory to index (relative to `searchserver/`) |
 
 ```bash
-# Use Gemini instead of Claude
+# Switch to Gemini
 LLM_PROVIDER=gemini ./start.sh
 
-# Index a different directory on a different port
-./start.sh 9090          # SEARCH_ROOT defaults to test_tree
+# Index a different directory
 SEARCH_ROOT=my_docs ./start.sh
+
+# Custom port
+./start.sh 9090
 ```
 
-## HTTP API
+---
 
-### Search
+## API Reference
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Home page (search + ask forms) |
-| `GET` | `/query?terms=<words>` | Hybrid search, returns HTML |
-| `GET` | `/api/search?q=<words>` | Hybrid search, returns JSON |
-| `GET` | `/ask?q=<question>` | RAG Q&A, returns HTML |
-| `GET` | `/static/<path>` | Serve a file from `SEARCH_ROOT` |
-
-### Index Mutation
+### C++ Server (port 8080)
 
 | Method | Path | Description |
 |---|---|---|
+| `GET` | `/` | Home page (SPA) |
+| `GET` | `/api/search?terms=<words>` | Hybrid search — returns JSON |
+| `GET` | `/api/ask?q=<question>` | RAG Q&A — returns JSON |
+| `GET` | `/static/<path>` | Serve a raw file from `SEARCH_ROOT` |
 | `PUT` | `/static/<path>` | Create or replace a file (body = content) |
-| `POST` | `/static/<path>` | Upload a new file (body = content) |
+| `POST` | `/static/<path>` | Upload a new file |
 | `DELETE` | `/static/<path>` | Delete a file |
 
-All mutation endpoints update both the BM25 inverted index and the FAISS vector index.
-
-### Embed Service (port 8001)
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/search` | `{"query": str, "k": int}` → TSV: `doc_id\tscore` per line |
-| `POST` | `/ask` | `{"question": str, "k": int}` → `{answer}\n---SOURCES---\n{files}` |
-| `POST` | `/index/add` | `{"id": str, "text": str}` → add/replace doc |
-| `DELETE` | `/index/<path>` | Remove a doc from the vector index |
-| `POST` | `/rebuild` | Rebuild the FAISS index from `SEARCH_ROOT` |
-| `GET` | `/health` | `{"status": "ok", "indexed": N}` |
-
-### `/api/search` JSON Response
+#### `/api/search` response
 
 ```json
 {
-  "query": "white whale obsession",
-  "bm25":     [{"id": "test_tree/books/mobydick.txt", "score": 84}, ...],
-  "semantic": [{"id": "test_tree/books/mobydick.txt", "score": 0.712}, ...],
-  "hybrid":   [{"id": "test_tree/books/mobydick.txt", "score": 0.031}, ...]
+  "query": "machine learning projects",
+  "bm25":     [{ "id": "search_content/projects.txt", "score": 84 }],
+  "semantic": [{ "id": "search_content/projects.txt", "score": 0.712 }],
+  "hybrid":   [{ "id": "search_content/projects.txt", "score": 0.031 }]
 }
 ```
 
+#### `/api/ask` response
+
+```json
+{
+  "answer": "Based on the provided documents...",
+  "sources": ["search_content/projects.txt", "search_content/resume.txt"]
+}
+```
+
+### Python Embed Service (port 8001)
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/search` | `{"query": str, "k": int}` → TSV: `doc_id\tscore` |
+| `POST` | `/ask` | `{"question": str, "k": int}` → answer + sources |
+| `POST` | `/index/add` | `{"id": str, "text": str}` → add/replace doc |
+| `DELETE` | `/index/<path>` | Remove a doc from the vector index |
+| `POST` | `/rebuild` | Rebuild FAISS index from `SEARCH_ROOT` |
+| `GET` | `/health` | `{"status": "ok", "indexed": N}` |
+
+---
+
 ## Evaluation
+
+The eval harness benchmarks BM25, semantic, and hybrid search against labeled queries and reports **MRR@10**, **Hits@1**, and **Hits@5** per method with a per-query-type breakdown.
 
 ```bash
 # Server must be running
@@ -147,78 +201,62 @@ python3 eval/run_eval.py
 
 # Custom port or query file
 python3 eval/run_eval.py --port 9090
-python3 eval/run_eval.py --queries path/to/my_queries.json
+python3 eval/run_eval.py --queries eval/queries.json
 ```
 
-Sample output:
-
-```
-Running 20 queries against localhost:8080...
-
-  [ 1] (semantic ) man wakes up transformed into a giant insect       B=0 S=1 H=1
-  [ 2] (semantic ) deception speed and tactics in ancient warfare     B=1 S=1 H=1
-  ...
-  [11] (keyword  ) Sherlock Holmes Baker Street Watson mystery        B=1 S=0 H=1
-  ...
-
---------------------------------------------------------------------
-                  ------- BM25 -------  --- SEMANTIC ---  --- HYBRID ---
-                  MRR@10   H@1   H@5   MRR@10   H@1   H@5   MRR@10   H@1   H@5
---------------------------------------------------------------------
-ALL  (n=20)        ...      ...   ...    ...      ...   ...    ...      ...   ...
-  keyword            ...                  ...                   ...          n=10
-  semantic           ...                  ...                   ...          n=10
---------------------------------------------------------------------
-```
-
-The `queries.json` format is simple to extend:
+Query file format:
 
 ```json
 [
   {
     "query": "your natural language query",
-    "relevant": ["test_tree/path/to/expected_doc.txt"],
+    "relevant": ["search_content/path/to/expected_doc.txt"],
     "type": "semantic"
   }
 ]
 ```
 
-## Building
+---
+
+## Building the C++ Server
 
 ```bash
 cd searchserver
-make              # builds searchserver, searchclient, and test_suite
-make searchserver # build only the server
-./test_suite      # run unit tests (179 assertions)
-make tidy-check   # run clang-tidy-19
-make format       # run clang-format-19 (Chromium style)
+make              # builds searchserver, searchclient, test_suite
+make searchserver # server only
+./test_suite      # unit tests (179 assertions)
+make tidy-check   # clang-tidy-19
+make format       # clang-format-19 (Chromium style)
 make clean
 ```
 
-Requires `clang++-19` and C++23. No third-party C++ libraries.
+Requires `clang++-19` and C++23. No third-party C++ libraries — HTTP parsing, thread pool, and inverted index are all implemented from scratch.
+
+---
 
 ## Project Structure
 
 ```
 .
+├── .env.example             # API key template — copy to .env
 ├── embed_service/
-│   ├── main.py              # FastAPI service: FAISS + sentence-transformers + LLM
+│   ├── main.py              # FastAPI: FAISS + sentence-transformers + LLM RAG
 │   └── requirements.txt
 ├── eval/
-│   ├── queries.json         # 20 labeled test queries with ground-truth doc IDs
+│   ├── queries.json         # labeled test queries with ground-truth doc IDs
 │   └── run_eval.py          # evaluation harness: MRR@10, Hits@1, Hits@5
+├── search_content/          # your documents go here (.txt, subdirs supported)
 └── searchserver/
-    ├── HttpServer.cpp/hpp   # accept loop, thread dispatch, route handling
-    ├── HttpRequest.cpp/hpp  # HTTP request parser
+    ├── HttpServer.cpp/hpp   # request routing, RRF merge, RAG orchestration
+    ├── HttpRequest.cpp/hpp  # HTTP/1.1 request parser
     ├── HttpResponse.cpp/hpp # HTTP response builder
     ├── InvertedIndex.cpp/hpp# BM25 inverted index
-    ├── VectorClient.cpp/hpp # HTTP client for embed service
-    ├── StaticFile.cpp/hpp   # static file GET/PUT/DELETE
+    ├── VectorClient.cpp/hpp # HTTP client for the embed service
+    ├── StaticFile.cpp/hpp   # file GET / PUT / DELETE with live index update
     ├── ThreadPool.cpp/hpp   # fixed-size worker thread pool
     ├── searchserver.cpp     # main entry point
-    ├── searchclient.cpp     # command-line HTTP client
-    ├── sample_http/         # home page HTML template
-    ├── test_tree/           # sample corpus (books, Enron emails, bash source)
-    ├── Makefile
-    └── start.sh             # one-command launcher
+    ├── searchclient.cpp     # CLI HTTP client for testing
+    ├── sample_http/         # Dingle SPA (HTML/CSS/JS)
+    ├── start.sh             # one-command build + launch
+    └── Makefile
 ```

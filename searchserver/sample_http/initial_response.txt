@@ -162,6 +162,9 @@ Content-length: 0
       flex-direction: column;
       gap: 8px;
       transition: border-color 0.15s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
     }
     .card:hover { border-color: var(--blue); }
 
@@ -347,13 +350,15 @@ Content-length: 0
     for (const r of results) {
       const snippet = await fetchSnippet(r.id);
       const pct = scorePercent(r.score);
-      const card = document.createElement('div');
+      const card = document.createElement('a');
       card.className = 'card';
+      card.href = '/static/' + r.id;
+      card.target = '_blank';
       card.innerHTML =
         '<div class="card-filename">' + esc(shortName(r.id)) + '</div>' +
         '<div class="score-row">' +
           '<div class="score-track"><div class="score-fill" style="width:' + pct + '%"></div></div>' +
-          '<span class="score-val">' + r.score.toFixed(4) + '</span>' +
+          '<span class="score-val">Rank ' + (results.indexOf(r) + 1) + '</span>' +
         '</div>' +
         (snippet ? '<div class="card-snippet">' + esc(snippet) + '</div>' : '');
       list.appendChild(card);
